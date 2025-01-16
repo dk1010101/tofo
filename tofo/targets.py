@@ -1,9 +1,9 @@
 # cSpell:ignore astropy AAVSO
 import copy
-import requests
 
 from typing import List, Tuple
 
+import requests
 import numpy as np
 
 import astropy.units as u
@@ -130,7 +130,7 @@ class Target():
     
     def lookup_object_details(self) -> bool:
         """Use online databases to find object position and other details."""
-        url= f'https://www.aavso.org/vsx/index.php'
+        url= 'https://www.aavso.org/vsx/index.php'
         query = {
             'view': 'api.object',
             'ident': self.star_name,

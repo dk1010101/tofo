@@ -11,7 +11,7 @@ except ImportError:
 import wx
 
 from ui.main_frame import MainFrame
-from lib.observatory import Observatory
+from tofo.observatory import Observatory
 
 
 class TOFOApp(wx.App):
@@ -22,7 +22,7 @@ class TOFOApp(wx.App):
         
     def OnInit(self):
         """Initialise the application"""
-        self.frame = MainFrame(None, wx.ID_ANY, "", observatory=self.observatory)
+        self.frame = MainFrame(None, wx.ID_ANY, "", observatory=self.observatory)  # pylint:disable=attribute-defined-outside-init
         self.SetTopWindow(self.frame)
         self.frame.Show()
         return True

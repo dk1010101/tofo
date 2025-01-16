@@ -12,7 +12,6 @@ from astropy.time import Time
 
 from astroplan.plots import plot_sky
 
-from palettable.tableau import Tableau_20
 from palettable.tableau import ColorBlind_10
 
 import wx
@@ -203,7 +202,7 @@ class MainFrame(wx.Frame):
         
         colours = ColorBlind_10.mpl_colors
         
-        have_targets: bool = False
+        # have_targets: bool = False
         for ridx, target in enumerate(self.targets):
             self.vis_update_target_grid_row(ridx)
             if self.ax and target.transits:
@@ -221,7 +220,7 @@ class MainFrame(wx.Frame):
                                 'color': plot_col,
                                 'picker': True
                             })
-                    have_targets = True
+                    # have_targets = True
         # if self.ax and have_targets:
         #    self.ax.legend(loc='lower left', bbox_to_anchor=(-0.4, 0.2))
         self.canvas.draw()
@@ -321,7 +320,7 @@ class MainFrame(wx.Frame):
 
     def on_menu_load_exoclock(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
         """Load targets from exoclock."""
-        pass
+        print("TODO load exoclock")
 
     def on_menu_exit_app(self, event):  # pylint:disable=unused-argument
         """Exit the app cleanly."""
@@ -434,37 +433,5 @@ class MainFrame(wx.Frame):
         if self._last_pick_mouseevent == label:
             return
         self._last_pick_mouseevent = label
-        self.label_tv_selected.SetLabelText(label)
-        # i = 0
-        # for t in self.targets:
-        #     if t.name == label:
-        #         break
-        #     i += 1
-        # self.grid_targets.SelectRow(i)
-        
-
-    #def on_canvas_mouse_move(self, event):
-    #    # display mouse pointer coordinates; based on code from NavigationToolbar2
-    #    s = ""
-    #    if event.inaxes and event.inaxes.get_navigate():
-    #        try:
-    #            xs = event.inaxes.format_xdata(event.xdata).strip()
-    #            ys = event.inaxes.format_ydata(event.ydata).strip()
-    #            s = "%s / %s"%(xs,ys)
-    #        except (ValueError, OverflowError):
-    #            pass
-    #        else:
-    #            if hasattr(event.inaxes, "_mouseover_set"):
-    #                artists = [a for a in event.inaxes._mouseover_set if a.contains(event) and a.get_visible()]
-    #            else:
-    #                # old matplotlib versions
-    #                artists = [a for a in event.inaxes.mouseover_set if a.contains(event) and a.get_visible()]#
-    #
-    #            if artists:
-    #                a = cbook._topmost_artist(artists)
-    #                if a is not event.inaxes.patch:
-    #                    data = a.get_cursor_data(event)
-    #                    if data is not None:
-    #                        s += ' [%s]' % a.format_cursor_data(data)
-    #                        
-    #        print('on_move: ', s, str(event))
+        # TODO: move this to status bar
+        # self.label_tv_selected.SetLabelText(label)

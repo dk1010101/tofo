@@ -25,9 +25,9 @@ import wx
 import wx.grid
 # end wxGlade
 
-from lib.ui_mpl_canvas import MatplotlibCanvas
-from lib.observatory import Observatory
-from lib.targets import Target
+from tofo.ui_mpl_canvas import MatplotlibCanvas
+from tofo.observatory import Observatory
+from tofo.targets import Target
 
 
 class TargetDialog(wx.Dialog):

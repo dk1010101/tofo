@@ -1,3 +1,4 @@
+# cSpell:ignore crota exoclock
 import csv
 import numpy as np
 

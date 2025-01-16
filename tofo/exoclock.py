@@ -1,10 +1,7 @@
-import os
-import pickle
+# cSpell:ignore exoclock astropy
 import time
 from pathlib import Path
-from io import StringIO
 import urllib
-import json
 
 import numpy as np
 import pandas as pd
@@ -61,7 +58,7 @@ class ExoClock():
             for e in self.exo_simple]
             
     def get_all_transits(self, time_start: atime.Time, time_end: atime.Time) -> list:
-        """Return a list of all transits visible from the observcatory between the start and end times.
+        """Return a list of all transits visible from the observatory between the start and end times.
 
         Args:
             time_start (astropy.time.Time): Observation start time
