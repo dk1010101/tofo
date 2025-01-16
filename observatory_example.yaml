@@ -28,3 +28,6 @@ observations:
   min_mag: 19.0
   exo_hours_before: 1
   exo_hours_after: 1
+exoclock:
+  cache_file: exoclock.pickle
+  cache_life_days: 1
