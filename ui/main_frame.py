@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore ridx irow rahms decdms mday Exoclock sizer
+# cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm
 import csv
 from datetime import datetime
 from typing import List
@@ -12,7 +12,8 @@ from astropy.time import Time
 
 from astroplan.plots import plot_sky
 
-from palettable.colorbrewer.qualitative import Dark2_7
+from palettable.tableau import Tableau_20
+from palettable.tableau import ColorBlind_10
 
 import wx
 import wx.adv
@@ -40,8 +41,10 @@ class MainFrame(wx.Frame):
         
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((744, 773))
+        self.SetSize((750, 900))
         self.SetTitle("Target of opportunity tool")
+
+        ft_section = wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
 
         self.frame_menubar = wx.MenuBar()
         wxglade_tmp_menu = wx.Menu()
@@ -55,11 +58,13 @@ class MainFrame(wx.Frame):
         self.SetMenuBar(self.frame_menubar)
         
         self.panel_main = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_NONE)
-
+        self.panel_main.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+        
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         
-        label_1 = wx.StaticText(self.panel_main, wx.ID_ANY, "Observation Date/Time")
-        sizer_main.Add(label_1, 0, 0, 0)
+        label_obs_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Observation Date/Time")
+        label_obs_title.SetFont(ft_section)
+        sizer_main.Add(label_obs_title, 1, 0, 0)
 
         sizer_observation_dt = wx.FlexGridSizer(1, 12, 3, 0)
         sizer_main.Add(sizer_observation_dt, 1, wx.EXPAND, 0)
@@ -82,11 +87,13 @@ class MainFrame(wx.Frame):
         sizer_observation_dt.Add(self.bt_dt_apply_all, 0, wx.ALIGN_CENTER_VERTICAL| wx.ALIGN_CENTER, 0)
         sizer_observation_dt.Add((50, 20), 0, 0, 0)
         # target grid label
-        label_2 = wx.StaticText(self.panel_main, wx.ID_ANY, "Targets")
-        sizer_main.Add(label_2, 0, 0, 0)
+        label_targets_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Targets")
+        label_targets_title.SetFont(ft_section)
+        sizer_main.Add(label_targets_title, 1, 0, 0)
         
         # target grid
         self.grid_targets: wx.grid.Grid = wx.grid.Grid(self.panel_main, wx.ID_ANY)
+        self.grid_targets.SetMinSize((500,250))
         self.grid_targets.CreateGrid(0, 6)
         self.grid_targets.SetColLabelValue(0, "Name")
         self.grid_targets.SetColLabelValue(1, "Start Time")
@@ -99,7 +106,7 @@ class MainFrame(wx.Frame):
         self.grid_targets.SetColSize(2, 25*5)
         self.grid_targets.SetColSize(3, 15*5)
         self.grid_targets.SetColSize(4, 15*5)
-        sizer_main.Add(self.grid_targets, 10, wx.EXPAND, 0)
+        sizer_main.Add(self.grid_targets, 5, wx.EXPAND, 0)
 
         # target grid manipulation buttons
         sizer_grid_target_bt = wx.GridSizer(1, 4, 0, 0)
@@ -117,12 +124,21 @@ class MainFrame(wx.Frame):
         
         
         # visibility plot label
-        label_3 = wx.StaticText(self.panel_main, wx.ID_ANY, "Target Visibility")
-        sizer_main.Add(label_3, 0, 0, 0)
+        sizer_tv = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_main.Add(sizer_tv, 1, 0, 0)
+        label_tv_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Target Visibility")
+        label_tv_title.SetFont(ft_section)
+        sizer_tv.Add(label_tv_title, 0, wx.ALIGN_BOTTOM, 0)
+        sizer_tv.Add((250, 40), 0, 0, 0)
+        label_tv_sel_label = wx.StaticText(self.panel_main, wx.ID_ANY, "Selected: ")
+        sizer_tv.Add(label_tv_sel_label, 0, wx.ALIGN_BOTTOM, 0)
+        self.label_tv_selected = wx.StaticText(self.panel_main, wx.ID_ANY, "")
+        self.label_tv_selected.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        sizer_tv.Add(self.label_tv_selected, 0, wx.ALIGN_BOTTOM, 0)
         
         # visibility plot
         self.canvas = MatplotlibCanvas(self.panel_main, wx.ID_ANY)
-        self.canvas.SetMinSize((500, 500))
+        self.canvas.SetMinSize((500, 400))
         self.figure = self.canvas.figure
         sizer_main.Add(self.canvas, 10, wx.EXPAND, 0)
         
@@ -141,6 +157,11 @@ class MainFrame(wx.Frame):
         self.dp_end.Bind(wx.adv.EVT_DATE_CHANGED, self.on_tdp_end_change)
         self.tp_end.Bind(wx.adv.EVT_TIME_CHANGED, self.on_tdp_end_change)
         self.bt_dt_apply_all.Bind(wx.EVT_BUTTON, self.on_bt_dt_apply_all)
+        # canvas events
+        self.canvas.mpl_connect( 'pick_event', self.on_canvas_pick)
+        self._last_pick_mouseevent = None  # store info, as we will act only once per pick event
+        # self.canvas.mpl_connect( 'motion_notify_event', self.on_canvas_mouse_move)
+        
         # self.cb_visible_at_all_times.Bind(wx.EVT_CHECKBOX, self.on_checkbox_change)
         
         self.set_datetimes()
@@ -162,7 +183,7 @@ class MainFrame(wx.Frame):
         """Draw the horizon from the horizon file."""
         if not self.ax:
             self.ax = self.figure.add_subplot(1, 1, 1, projection='polar')
-            self.ax.set_prop_cycle('color', Dark2_7.mpl_colors)
+            # self.ax.set_prop_cycle('color', ColorBlind_10.mpl_colors)
         h = [(x[0]*np.pi/180.0, 90-x[1]) for x in self.observatory.horizon]
         theta = [x[0] for x in h]
         r = [x[1] for x in h]
@@ -179,21 +200,30 @@ class MainFrame(wx.Frame):
         if self.ax:
             self.ax.cla()
         self.plot_horizon()
+        
+        colours = ColorBlind_10.mpl_colors
+        
         have_targets: bool = False
         for ridx, target in enumerate(self.targets):
             self.vis_update_target_grid_row(ridx)
             if self.ax and target.transits:
                 tds = target.get_transit_details()
                 if tds:
-                    exo_start = tds[0][0]
-                    duration = target.duration * u.hour + self.observatory.exo_hours_before + self.observatory.exo_hours_after
+                    obs_start = tds[0][0]
+                    duration = (tds[0][-1] - tds[0][0]).to(u.hour)
+                    plot_col = colours[ridx % len(colours)]
                     plot_sky(target.target, 
-                            self.observatory.observer, 
-                            exo_start + np.linspace(0, duration.to(u.hour).value, 10)*u.hour, 
-                            ax=self.ax)
+                             self.observatory.observer, 
+                             obs_start + np.linspace(0, duration.value, 20)*u.hour, 
+                             ax=self.ax,
+                             style_kwargs={
+                                's': 8,
+                                'color': plot_col,
+                                'picker': True
+                            })
                     have_targets = True
-        if self.ax and have_targets:
-            self.ax.legend(loc='lower left', bbox_to_anchor=(-0.4, 0.2))
+        # if self.ax and have_targets:
+        #    self.ax.legend(loc='lower left', bbox_to_anchor=(-0.4, 0.2))
         self.canvas.draw()
         
     def vis_update_target_grid_row(self, row_idx: int) -> None:
@@ -282,8 +312,12 @@ class MainFrame(wx.Frame):
                                                    dec_j2000=dec))
                         
                     self.vis_refresh_targets()
+                    self.Layout()
+                    self.Refresh()
+                    self.Update()
             except IOError:
                 wx.LogError(f"Cannot open target file '{pathname}'")
+                
 
     def on_menu_load_exoclock(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
         """Load targets from exoclock."""
@@ -336,10 +370,12 @@ class MainFrame(wx.Frame):
                             name=value, 
                             observation_time=start_time,
                             observation_duration=d)
-                nt.lookup_object_details()               
+                has_details: bool = nt.lookup_object_details()
+                if not has_details:
+                    wx.MessageBox("Failed to load object details for the object.\nCheck the name and try again.", "Hmmmmm....", wx.OK|wx.ICON_QUESTION)
                 self.targets[r] = nt
-            except ValueError:
-                wx.MessageBox(f'Failed to get coordinates for object {value}!\nPlace change it and try again.', 'Like, Doh!', wx.OK | wx.ICON_ERROR)
+            except ValueError as e:
+                wx.MessageBox(f'Failed to get coordinates for object {value}!\nPlease change it and try again.\n\nError:\n{e}', 'Like, Doh!', wx.OK | wx.ICON_ERROR)
         elif c == 1:
             self.targets[r].observation_time = Time(value)
         elif c == 2:
@@ -378,7 +414,7 @@ class MainFrame(wx.Frame):
         if len(selected_rows) == 0:
             return
         self.grid_targets.DeleteRows(selected_rows[0])
-        del self.target[selected_rows[0]]
+        del self.targets[selected_rows[0]]
         
         self.vis_refresh_targets()
 
@@ -389,3 +425,46 @@ class MainFrame(wx.Frame):
     def on_cb_visibility_change(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
         """Update the targets when the view only always visible/view all state has changed."""
         self.vis_refresh_targets()
+
+    def on_canvas_pick(self, event):
+        """Show what target was selected on the canvas"""
+        artist = event.artist
+        label = artist.get_label()
+        print(label)
+        if self._last_pick_mouseevent == label:
+            return
+        self._last_pick_mouseevent = label
+        self.label_tv_selected.SetLabelText(label)
+        # i = 0
+        # for t in self.targets:
+        #     if t.name == label:
+        #         break
+        #     i += 1
+        # self.grid_targets.SelectRow(i)
+        
+
+    #def on_canvas_mouse_move(self, event):
+    #    # display mouse pointer coordinates; based on code from NavigationToolbar2
+    #    s = ""
+    #    if event.inaxes and event.inaxes.get_navigate():
+    #        try:
+    #            xs = event.inaxes.format_xdata(event.xdata).strip()
+    #            ys = event.inaxes.format_ydata(event.ydata).strip()
+    #            s = "%s / %s"%(xs,ys)
+    #        except (ValueError, OverflowError):
+    #            pass
+    #        else:
+    #            if hasattr(event.inaxes, "_mouseover_set"):
+    #                artists = [a for a in event.inaxes._mouseover_set if a.contains(event) and a.get_visible()]
+    #            else:
+    #                # old matplotlib versions
+    #                artists = [a for a in event.inaxes.mouseover_set if a.contains(event) and a.get_visible()]#
+    #
+    #            if artists:
+    #                a = cbook._topmost_artist(artists)
+    #                if a is not event.inaxes.patch:
+    #                    data = a.get_cursor_data(event)
+    #                    if data is not None:
+    #                        s += ' [%s]' % a.format_cursor_data(data)
+    #                        
+    #        print('on_move: ', s, str(event))
