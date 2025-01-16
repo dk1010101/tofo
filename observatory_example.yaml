@@ -1,0 +1,30 @@
+observatory:
+  name: "Palomar Observatory"
+  lat_deg: 33.3564
+  lon_deg: -116.865
+  elevation_m: 1712
+  time_zone: "US/Pacific"
+  temperature_C: 12.0
+  rel_humidity_percentage: 18
+  pressure_hPa: 985.6
+  horizon_file: horizon_example.csv
+telescope:
+  name: "Hale Telescope"
+  focal_length_mm: 16750
+  aperture_mm: 5100
+  sensor:
+    name: "Science Detector"
+    size_x_mm: 92.2
+    size_y_mm: 92.4
+    num_pix_x: 6144
+    num_pix_y: 6160
+    pix_x_size_um: 3.87
+    pix_y_size_um: 3.87
+    crota1: 0.0
+    crota2: 0.0
+  filter: r
+observations:
+  twilight: astronomical
+  min_mag: 19.0
+  exo_hours_before: 1
+  exo_hours_after: 1

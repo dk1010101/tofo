@@ -1,0 +1,15 @@
+requests
+
+numpy
+scipy
+pandas
+
+matplotlib
+palettable
+
+astropy
+astroplan
+pyvo
+regions
+
+wxpython

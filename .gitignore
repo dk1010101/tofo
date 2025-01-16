@@ -1,3 +1,8 @@
+# project specific files
+observatory.yaml
+horizon.csv
+horizon2.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
