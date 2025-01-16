@@ -20,9 +20,9 @@ import wx.adv
 import wx.grid
 
 from ui.target_dialog import TargetDialog
-from lib.observatory import Observatory
-from lib.targets import Target
-from lib.ui_mpl_canvas import MatplotlibCanvas
+from tofo.observatory import Observatory
+from tofo.targets import Target
+from tofo.ui_mpl_canvas import MatplotlibCanvas
 
 
 class MainFrame(wx.Frame):
