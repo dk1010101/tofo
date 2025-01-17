@@ -83,7 +83,7 @@ class Target():
             self.c = SkyCoord(f"{self._ra_j2000} {self._dec_j2000}", unit=(u.hourangle, u.deg))
             self.target = FixedTarget(name=self.name, coord=self.c)
     
-    def _calc_transits(self) -> None:
+    def _calc_transits(self, as_exoplanet_transit: bool = False) -> None:
         """Once we have all the data, create the eclipsing system and work out when next eclipses will happen given the observation parameters."""
         if all([self.ra_j2000, 
                self.dec_j2000, 
@@ -104,19 +104,37 @@ class Target():
                                                         duration=duration, 
                                                         name=self.name)
                 num_obs = np.ceil((self._observation_duration.to(u.day) / (self.period*u.day)).value)
-                transits = self.eclipsing_system.next_primary_eclipse_time(self.observation_time, num_obs)
-                observables = [is_event_observable(constraints, self.observatory.observer, self.target, times=midtransit_time) for midtransit_time in transits]
-                self.transits = [t for t, o in zip(transits, observables) if o]
+                midtransit_times = self.eclipsing_system.next_primary_eclipse_time(self.observation_time, num_obs)
+                is_mid_observable = [is_event_observable(constraints, self.observatory.observer, self.target, times=midtransit_time) for midtransit_time in midtransit_times]
+                if as_exoplanet_transit:
+                    is_observable = self._is_transit_observable(midtransit_times, is_mid_observable)
+                else:
+                    is_observable = is_mid_observable
+                self.transits = [t for t, o in zip(midtransit_times, is_observable) if o]
                 
             else:  # it is just a fixed object - so always visible
-                transits = [self.observation_time]
-                observables = [is_event_observable(constraints, self.observatory.observer, self.target, times=midtransit_time) for midtransit_time in transits]
-                self.transits = [t for t, o in zip(transits, observables) if o]
+                midtransit_times = [self.observation_time+self.observation_duration/2.0]
+                is_mid_observable = [is_event_observable(constraints, self.observatory.observer, self.target, times=midtransit_time) for midtransit_time in midtransit_times]
+                self.transits = [t for t, o in zip(midtransit_times, is_mid_observable) if o]
             
-    def get_transit_details(self) -> List[Tuple[Time, Time, Time, Time, Time]]:
+    def _is_transit_observable(self, midtransit_times: list, is_mid_observable: list) -> list:
+        def in_time_range(mmt: Time, mid_observable: bool) -> bool:
+            if not mid_observable:
+                return False
+            if isinstance(self.eclipsing_system.duration, u.Quantity) or (self.eclipsing_system.duration and not np.isnan(self.eclipsing_system.duration)):
+                delta = self.eclipsing_system.duration.to(u.hour).value / 2.0
+            else:
+                delta = 1  # random constant fun
+            delta *= u.hour
+            start = mmt - delta - self.observatory.exo_hours_before
+            end = mmt + delta + self.observatory.exo_hours_before
+            return self.observation_time <= start <= end <= self.observation_end_time
+        return [in_time_range(mtt, imo) for mtt, imo in zip(midtransit_times, is_mid_observable)]
+            
+    def get_transit_details(self, as_exoplanet_transit: bool = False) -> List[Tuple[Time, Time, Time, Time, Time]]:
         """Get full transit timings for all possible transits."""
         if not self.transits:
-            self._calc_transits()
+            self._calc_transits(as_exoplanet_transit)
         if not self.transits:
             return []
         if self.duration is None or np.isnan(self.duration):

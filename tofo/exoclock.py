@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock astropy
+import copy
 import time
 from pathlib import Path
 import urllib
@@ -9,7 +10,8 @@ import pandas as pd
 
 import astropy.units as u
 import astropy.time as atime
-from astroplan import EclipsingSystem
+from astropy.coordinates import SkyCoord
+from astroplan import FixedTarget, EclipsingSystem, LocalTimeConstraint, is_event_observable
 
 from tofo.observatory import Observatory
 
@@ -71,4 +73,10 @@ class ExoClock():
                 but they may not be visible at the observatory due to horizon limitations.
         """
         mtt = [o.next_primary_eclipse_time(time_start, n_eclipses=1) for o in self.observable]
-        return [(name, t) for name, t in zip(self.exo_simple, mtt) if t <= time_end]
+        constraints = copy.deepcopy(self.observatory.constraints)
+        constraints.append(LocalTimeConstraint(min=time_start.datetime.time(),
+                                               max=time_end.datetime.time()))
+        targets = [FixedTarget(SkyCoord(f"{obj[4]} {obj[5]}", unit=(u.hourangle, u.deg))) for obj in self.exo_simple]
+        observables = [is_event_observable(constraints, self.observatory.observer, targets, times=midtransit_time) for midtransit_time in mtt]
+                
+        return [(name, t) for name, t, o in zip(self.exo_simple, mtt, observables) if o]
