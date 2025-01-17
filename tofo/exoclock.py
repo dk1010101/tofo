@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock astropy
 import time
 from pathlib import Path

@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore AAVSO NAXIS CUNIT1 CUNIT2 CDELT1 CDELT2 CRPIX1 CRPIX2 CRVAL1 CRVAL2 CROTA1 CROTA2 auid radec tomag hmsdms
 
+# TODO: add loading progress something
+
 import math
 import copy 
 
@@ -288,4 +290,4 @@ class TargetDialog(wx.Dialog):
         self._show_tofo(wcs)
         
         if len(self.df) == 0:
-            wx.MessageBox(f'There are no targets of opportunity for {self.target}', 'Shame...', wx.OK | wx.ICON_WARNING)
+            wx.MessageBox(f'There are no targets of opportunity for {self.target.name}\nfor observations between {self.target.observation_time.iso[:16]} and {self.target.observation_end_time.iso[:16]}', 'Shame...', wx.OK | wx.ICON_WARNING)

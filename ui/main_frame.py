@@ -29,6 +29,9 @@ class MainFrame(wx.Frame):
     
     def __init__(self, *args, **kwds):
         """Create the UI."""
+        
+        margin_size = 8
+        
         self.observatory: Observatory = kwds['observatory']
         del kwds['observatory']
         
@@ -63,11 +66,11 @@ class MainFrame(wx.Frame):
         
         label_obs_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Observation Date/Time")
         label_obs_title.SetFont(ft_section)
-        sizer_main.Add(label_obs_title, 1, 0, 0)
+        sizer_main.Add(label_obs_title, 1, wx.EXPAND|wx.ALL, margin_size)
 
         sizer_observation_dt = wx.FlexGridSizer(1, 12, 3, 0)
         sizer_main.Add(sizer_observation_dt, 1, wx.EXPAND, 0)
-        sizer_observation_dt.Add((50, 40), 0, 0, 0)
+        sizer_observation_dt.Add((50, 20), 0, 0, 0)
         label_gdt_1 = wx.StaticText(self.panel_main, wx.ID_ANY, "Start Time")
         sizer_observation_dt.Add(label_gdt_1, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         self.dp_start = wx.adv.DatePickerCtrl(self.panel_main, wx.ID_ANY)
@@ -85,10 +88,11 @@ class MainFrame(wx.Frame):
         self.bt_dt_apply_all = wx.Button(self.panel_main, wx.ID_ANY, "Apply to All")
         sizer_observation_dt.Add(self.bt_dt_apply_all, 0, wx.ALIGN_CENTER_VERTICAL| wx.ALIGN_CENTER, 0)
         sizer_observation_dt.Add((50, 20), 0, 0, 0)
+        
         # target grid label
         label_targets_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Targets")
         label_targets_title.SetFont(ft_section)
-        sizer_main.Add(label_targets_title, 1, 0, 0)
+        sizer_main.Add(label_targets_title, 1,  wx.EXPAND|wx.LEFT|wx.RIGHT|wx.TOP, margin_size)
         
         # target grid
         self.grid_targets: wx.grid.Grid = wx.grid.Grid(self.panel_main, wx.ID_ANY)
@@ -105,7 +109,7 @@ class MainFrame(wx.Frame):
         self.grid_targets.SetColSize(2, 25*5)
         self.grid_targets.SetColSize(3, 15*5)
         self.grid_targets.SetColSize(4, 15*5)
-        sizer_main.Add(self.grid_targets, 5, wx.EXPAND, 0)
+        sizer_main.Add(self.grid_targets, 5, wx.EXPAND|wx.LEFT|wx.RIGHT, margin_size)
 
         # target grid manipulation buttons
         sizer_grid_target_bt = wx.GridSizer(1, 4, 0, 0)
@@ -127,22 +131,20 @@ class MainFrame(wx.Frame):
         sizer_main.Add(sizer_tv, 1, 0, 0)
         label_tv_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Target Visibility")
         label_tv_title.SetFont(ft_section)
-        sizer_tv.Add(label_tv_title, 0, wx.ALIGN_BOTTOM, 0)
-        sizer_tv.Add((250, 40), 0, 0, 0)
-        label_tv_sel_label = wx.StaticText(self.panel_main, wx.ID_ANY, "Selected: ")
-        sizer_tv.Add(label_tv_sel_label, 0, wx.ALIGN_BOTTOM, 0)
-        self.label_tv_selected = wx.StaticText(self.panel_main, wx.ID_ANY, "")
-        self.label_tv_selected.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-        sizer_tv.Add(self.label_tv_selected, 0, wx.ALIGN_BOTTOM, 0)
-        
+        sizer_tv.Add(label_tv_title, 0, wx.ALIGN_BOTTOM|wx.LEFT|wx.RIGHT|wx.TOP, margin_size)
+                
         # visibility plot
         self.canvas = MatplotlibCanvas(self.panel_main, wx.ID_ANY)
         self.canvas.SetMinSize((500, 400))
         self.figure = self.canvas.figure
-        sizer_main.Add(self.canvas, 10, wx.EXPAND, 0)
+        sizer_main.Add(self.canvas, 10, wx.EXPAND|wx.ALL, margin_size)
         
         # and we are done
         self.panel_main.SetSizer(sizer_main)
+        
+        # status bar
+        self.sb = self.CreateStatusBar()
+        self.sb.SetStatusText("Selected object: ")
         self.Layout()
 
         # event bindings
@@ -429,9 +431,7 @@ class MainFrame(wx.Frame):
         """Show what target was selected on the canvas"""
         artist = event.artist
         label = artist.get_label()
-        print(label)
         if self._last_pick_mouseevent == label:
             return
         self._last_pick_mouseevent = label
-        # TODO: move this to status bar
-        # self.label_tv_selected.SetLabelText(label)
+        self.sb.SetStatusText(f"Selected Object: {label}")

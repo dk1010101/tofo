@@ -10,15 +10,32 @@ events.
 All fields of view with targets of opportunity can be saves as skyfield images and as text data
 sets.
 
-# Installation
+## Installation
 
-This has been tested with python 3.13 under conda and outside. To make it work you will need to
-install all packages in `requirements.txt` and then just `python tofo.py` and you are off but first
-you will need to set up your observatory data by copying `observatory_example.yaml` to `observatory.yaml`
+This too has been tested with python 3.13 under *conda* and outside on windows and linux. 
+It is recommended that you create a `venv` and install the tool in there.
+First you will need to install all packages, preferably using `requirements.txt`, and then you can just run `python tofo.py`
+however you will also need to set up your observatory by copying `observatory_example.yaml` to `observatory.yaml`
 and editing it. You may also want to provide your own horizon file by copying `horizon_example.csv` and
-adjusting `observatory.yaml` accordingly.
+adjusting `observatory.yaml` accordingly. 
 
-# How to use the tool
+A possible `pip` session (on linux) may look something like this but of course YMMV:
+
+```
+> python -m venv .venv_tofo
+> source .venv_tofo\bin\activate
+> pip install -r requirements.txt
+> cp observatory_example.yaml observatory.yaml
+> vi observatory.yaml
+[edit your file]
+> cp horizon_example.csv horizon.csv
+> vi horizon.csv
+[edit your file]
+> python tofo.py
+[profit]
+```
+
+## Usage
 
 You can load targets from a file, see eg `targets.csv`, or you can add them manually by adding a row and
 typing in the object name in the `name` column. It is probably easier to just load exoclock targets using
@@ -35,3 +52,13 @@ in the background. Once loaded this screen is not really interactive but you can
 by clicking on the `save` button.
 
 Enjoy!
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests (if any) as appropriate.
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)

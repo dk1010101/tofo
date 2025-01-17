@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore crota exoclock
 import csv
 import numpy as np

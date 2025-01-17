@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+# cSpell:ignore astropy altaz
 import copy
 
 from typing import List, Tuple

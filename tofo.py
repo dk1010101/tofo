@@ -13,7 +13,6 @@ import wx
 from ui.main_frame import MainFrame
 from tofo.observatory import Observatory
 
-
 class TOFOApp(wx.App):
     """Main Application"""    
     def __init__(self, observatory: Observatory, *args, **kwds):
@@ -25,6 +24,7 @@ class TOFOApp(wx.App):
         self.frame = MainFrame(None, wx.ID_ANY, "", observatory=self.observatory)  # pylint:disable=attribute-defined-outside-init
         self.SetTopWindow(self.frame)
         self.frame.Show()
+        
         return True
 
 def load_observatory_data() -> Observatory:
@@ -34,7 +34,8 @@ def load_observatory_data() -> Observatory:
         return Observatory(obsdata)
 
 if __name__ == "__main__":
-    
+
     obsobj = load_observatory_data()
     TofO = TOFOApp(observatory=obsobj)
+    
     TofO.MainLoop()
