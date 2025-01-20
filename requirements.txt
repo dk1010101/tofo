@@ -9,7 +9,13 @@ palettable
 
 astropy
 astroplan
+astroquery
 pyvo
 regions
+h5py
 
 wxpython
+
+pytest
+pytest-cov
+pytest-datadir

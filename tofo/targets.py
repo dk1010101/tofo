@@ -2,15 +2,15 @@
 # cSpell:ignore astropy AAVSO
 import copy
 
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
-import requests
+import pytz
 import numpy as np
 
 import astropy.units as u
-from astropy.coordinates import SkyCoord, Angle
+from astropy.coordinates import SkyCoord
 from astropy.time import Time
-from astroplan import FixedTarget, EclipsingSystem, LocalTimeConstraint, is_event_observable
+from astroplan import FixedTarget, EclipsingSystem, TimeConstraint, is_event_observable
 
 from tofo.observatory import Observatory
 
@@ -28,11 +28,14 @@ class Target():
                  star_name: str = "",
                  ra_j2000: str = "",
                  dec_j2000: str = "",
-                 epoch: float = np.nan,
-                 period: float = np.nan,
-                 duration: float = np.nan,
+                 epoch: Time | None = None,
+                 period: u.Quantity | None = None,
+                 duration: u.Quantity | None = None,
+                 eccentricity: float = 0.0,
+                 argument_of_periapsis: u.Quantity = 0.0 * u.deg,
                  observation_time: Time | None = None,
-                 observation_duration: u.Quantity = None
+                 observation_duration: u.Quantity = None,
+                 is_exoplanet: bool = False
                  ):
         """Create the Target object.
 
@@ -51,17 +54,22 @@ class Target():
         self.observatory = observatory
         self._name: str = ""
         self._star_name: str = ""
-        self._ra_j2000: str = ""
-        self._dec_j2000: str = ""
-        self._epoch: float = np.nan
-        self._period: float = np.nan
-        self._duration: float = np.nan
+        self._ra_j2000: str | float = ""
+        self._dec_j2000: str | float = ""
+        self._epoch: Time | None
+        self.epoch_format: str = 'JD'
+        self.epoch_scale: str = 'TDB'
+        self._period: u.Quantity | None = None
+        self._duration: u.Quantity | None = None 
         self._observation_time: Time | None = None
         self._observation_duration: u.Quantity | None = None
         self.eclipsing_system: EclipsingSystem = None
+        self.is_exoplanet: bool = is_exoplanet
         self.c: SkyCoord = None
         self.target: FixedTarget = None
-        self.transits: list = []
+        self.observable_mid_transit_times: list = []
+        self.eccentricity = eccentricity
+        self.argument_of_periapsis: u.Quantity = argument_of_periapsis
         
         # assignments
         self.ra_j2000 = ra_j2000
@@ -77,100 +85,109 @@ class Target():
         self.observation_duration = observation_duration
         self.observation_time = observation_time
     
+    def to_utc(self, dt: Time) -> Time:
+        """Convert time to UTC time."""
+        tz = self.observatory.observer.timezone
+        ndt = tz.normalize(tz.localize(dt.to_datetime())).astimezone(pytz.utc)
+        return Time(ndt, location=self.observatory.location)
+
+    def to_ltz(self, dt: Time) -> Time:
+        """Convert time to local time zone time."""
+        tzutc = pytz.utc
+        ndt = tzutc.localize(dt.to_datetime())
+        lt = ndt.astimezone(self.observatory.observer.timezone)
+        return Time(lt.replace(tzinfo=None), location=self.observatory.location)
+    
     def _set_position(self) -> None:
         """Calculate the sky position and create a fixed target for the object."""
         if self._ra_j2000 and self._dec_j2000 and self._name:
-            self.c = SkyCoord(f"{self._ra_j2000} {self._dec_j2000}", unit=(u.hourangle, u.deg))
+            if isinstance(self._ra_j2000, float) and isinstance(self._dec_j2000, float):
+                self.c = SkyCoord(ra=self._ra_j2000*u.deg, dec=self._dec_j2000*u.deg)
+            elif isinstance(self._ra_j2000, str) and isinstance(self._dec_j2000, str):
+                self.c = SkyCoord(f"{self._ra_j2000} {self._dec_j2000}", unit=(u.hourangle, u.deg))
+            else:
+                raise ValueError(f"RA and DEC need to be either both floats or strings. Anything else is sus. {self._ra_j2000=} {self._dec_j2000=}")
             self.target = FixedTarget(name=self.name, coord=self.c)
     
-    def _calc_transits(self, as_exoplanet_transit: bool = False) -> None:
+    def _calc_transits(self) -> None:
         """Once we have all the data, create the eclipsing system and work out when next eclipses will happen given the observation parameters."""
         if all([self.ra_j2000, 
-               self.dec_j2000, 
-               self.name, 
-               self.observation_time,
-               ((self.observation_duration is not None) and not np.isnan(self.observation_duration.value)),
-               self.period != 0.0]):
-            constraints = copy.deepcopy(self.observatory.constraints)
-            constraints.append(LocalTimeConstraint(min=self.observation_time.datetime.time(),
-                                                    max=(self.observation_time+self.observation_duration).datetime.time()))
+                self.dec_j2000, 
+                self.name, 
+                self.observation_time,
+                ((self.observation_duration is not None) and not np.isnan(self.observation_duration.value)),
+                ]):
                 
-            if not any(np.isnan([self.epoch, self.period])):  # it is a transit-like thing
+            if self.epoch is not None and self.period is not None:  # it is a transit-like thing
                 duration = 1. * u.minute  # in case we don't have duration, we will just assume it is something short
-                if not np.isnan(self.duration):
+                if self.duration is None:
                     duration = self.duration * u.hour  # if we have the duration (transit, eclipse) then use it
-                self.eclipsing_system = EclipsingSystem(primary_eclipse_time=Time(self.epoch, format='jd'), 
-                                                        orbital_period=self.period * u.day, 
+                self.eclipsing_system = EclipsingSystem(primary_eclipse_time=self.epoch, 
+                                                        orbital_period=self.period, 
                                                         duration=duration, 
-                                                        name=self.name)
-                num_obs = np.ceil((self._observation_duration.to(u.day) / (self.period*u.day)).value)
+                                                        name=self.name,
+                                                        eccentricity=self.eccentricity,
+                                                        argument_of_periapsis=self.argument_of_periapsis)
+                num_obs = np.ceil((self._observation_duration.to(u.day) / (self.period * u.day)).value)
                 midtransit_times = self.eclipsing_system.next_primary_eclipse_time(self.observation_time, num_obs)
-                is_mid_observable = [is_event_observable(constraints, self.observatory.observer, self.target, times=midtransit_time) for midtransit_time in midtransit_times]
-                if as_exoplanet_transit:
-                    is_observable = self._is_transit_observable(midtransit_times, is_mid_observable)
-                else:
-                    is_observable = is_mid_observable
-                self.transits = [t for t, o in zip(midtransit_times, is_observable) if o]
-                
             else:  # it is just a fixed object - so always visible
+                # TODO: fix non-exo main target observability
                 midtransit_times = [self.observation_time+self.observation_duration/2.0]
-                is_mid_observable = [is_event_observable(constraints, self.observatory.observer, self.target, times=midtransit_time) for midtransit_time in midtransit_times]
-                self.transits = [t for t, o in zip(midtransit_times, is_mid_observable) if o]
+            transit_observability = self.check_observability(midtransit_times, fully_visible=False)
+            self.observable_mid_transit_times = [t for t, o in zip(midtransit_times, transit_observability) if o]
             
-    def _is_transit_observable(self, midtransit_times: list, is_mid_observable: list) -> list:
-        def in_time_range(mmt: Time, mid_observable: bool) -> bool:
-            if not mid_observable:
-                return False
-            if isinstance(self.eclipsing_system.duration, u.Quantity) or (self.eclipsing_system.duration and not np.isnan(self.eclipsing_system.duration)):
-                delta = self.eclipsing_system.duration.to(u.hour).value / 2.0
-            else:
-                delta = 1  # random constant fun
-            delta *= u.hour
-            start = mmt - delta - self.observatory.exo_hours_before
-            end = mmt + delta + self.observatory.exo_hours_before
-            return self.observation_time <= start <= end <= self.observation_end_time
-        return [in_time_range(mtt, imo) for mtt, imo in zip(midtransit_times, is_mid_observable)]
-            
-    def get_transit_details(self, as_exoplanet_transit: bool = False) -> List[Tuple[Time, Time, Time, Time, Time]]:
-        """Get full transit timings for all possible transits."""
-        if not self.transits:
-            self._calc_transits(as_exoplanet_transit)
-        if not self.transits:
-            return []
-        if self.duration is None or np.isnan(self.duration):
-            if self.transits:
-                td = [(self.observation_time, self.observation_time, self.observation_time + self.observation_duration / 2.0, self.observation_end_time, self.observation_end_time)]
-            else:
-                td = []
-        else:
-            delta = (self.duration / 2.0) * u.hour
-            td = [(t-delta-self.observatory.exo_hours_before, t-delta, t, t+delta, t+delta+self.observatory.exo_hours_after) for t in self.transits]
-        return td
+    def has_transits(self) -> bool:
+        """Does this target have any transits in the specified observation time."""
+        return len(self.observable_mid_transit_times) > 0
     
-    def lookup_object_details(self) -> bool:
-        """Use online databases to find object position and other details."""
-        url= 'https://www.aavso.org/vsx/index.php'
-        query = {
-            'view': 'api.object',
-            'ident': self.star_name,
-            'format': 'json'
-        }
+    def check_observability(self, mid_times: List[Time], fully_visible: bool = True) -> List[bool]:
+        """Check if the transit is visible.
+
+        Args:
+            mid_times (List[Time]): List of mid-transit times
+            fully_visible (bool, optional): Should we check if all parts of the transit are visible or just some. Defaults 
+                to True meaning all should be visible.
+
+        Returns:
+            List[bool]: List of booleans, one for each transit time.
+        """
+        time_c = TimeConstraint(min=self.observation_time,
+                                max=self.observation_end_time)
+
+        # we need to filter the times as otherwise we will be doing a lot of unnecessary calculations
+        all_transit_times = [self._transit_times(t) for t in mid_times if self.observation_time <= t <= self.observation_end_time]
         
-        response = requests.get(url, params=query, timeout=30)
-        js = response.json()
-        print(js)
-        if 'VSXObject' in js and js['VSXObject']:            
-            ra = Angle(float(js['VSXObject']['RA2000'])*u.deg).hms
-            dec = Angle(float(js['VSXObject']['Declination2000'])*u.deg).dms
-            self.ra_j2000 = f"{int(ra.h):02d}:{int(abs(ra.m)):02d}:{abs(ra.s):04.1f}"
-            self.dec_j2000 = f"{int(dec.d):+3d}:{int(abs(dec.m)):02d}:{abs(dec.s):04.1f}"
-            
-            self.epoch = float(js['VSXObject'].get('Epoch', '2400000.0000'))
-            self.period = float(js['VSXObject'].get('Period', 0.0))
-            self.duration = float(js['VSXObject'].get('EclipseDuration', 0.0))
-            return True
+        visibility: List[bool] = []
+        if fully_visible:
+            fn = all
         else:
-            return False
+            fn = any
+        
+        for _, times in all_transit_times:
+            visibility.append(
+                fn([is_event_observable([time_c, *self.observatory.constraints], self.observatory.observer, self.target, t)
+                    for t in times
+                    ])
+            )
+        return visibility
+    
+    def _transit_times(self, t: Time) -> Tuple[Tuple[Time, Time, Time, Time, Time], Tuple[Time, Time, Time, Time, Time]]:
+        """For some mid-transit time, get full set of transit times as a tuple along with a tuple containing those times 
+        adjusted for the barycentric offset."""
+        d: u.Quantity = 0.1  # random duration of 6 mins
+        if self.duration is None or np.isnan(self.duration):
+            d = self.duration / 2.0  # since offset if 1/2 the duration from the mid-point...
+        d *= u.hour
+        
+        tt = (
+            t - d - self.observatory.exo_hours_before,
+            t - d,
+            t,
+            t + d,
+            t + d + self.observatory.exo_hours_after
+        )
+        deltas = [t.light_travel_time(self.target.coord, kind='barycentric', location=self.observatory.location) for t in tt]
+        return tt, tuple([t - d for t, d in zip(tt, deltas)])
     
     @property
     def name(self) -> str:
@@ -199,35 +216,41 @@ class Target():
     @property
     def ra_j2000(self) -> str:
         """RA for the object in the HMS notation."""
-        return self._ra_j2000
+        if isinstance(self._ra_j2000, str):
+            return self._ra_j2000.strip()
+        else:
+            return self._ra_j2000
     
     @property
     def dec_j2000(self) -> str:
         """DEC for the object in the DMS notation."""
-        return self._dec_j2000
+        if isinstance(self._dec_j2000, str):
+            return self._dec_j2000.strip()
+        else:
+            return self._dec_j2000
     
     @ra_j2000.setter
-    def ra_j2000(self, ra: str) -> None:
+    def ra_j2000(self, ra: str | float) -> None:
         self._ra_j2000 = ra
         self._set_position()
         
     @dec_j2000.setter
-    def dec_j2000(self, dec: str) -> None:
+    def dec_j2000(self, dec: str | float) -> None:
         self._dec_j2000 = dec
         self._set_position()
         
     @property
-    def epoch(self) -> float:
+    def epoch(self) -> Time | None:
         """Event epoch."""
         return self._epoch
     
     @property
-    def period(self) -> float:
+    def period(self) -> u.Quantity | None:
         """Event period."""
         return self._period
     
     @property
-    def duration(self) -> float:
+    def duration(self) -> u.Quantity | None:
         """Event duration."""
         return self._duration
 
@@ -249,17 +272,19 @@ class Target():
         return self.observation_time + self.observation_duration
     
     @epoch.setter
-    def epoch(self, e: float) -> None:
+    def epoch(self, e: float | Time | None) -> None:
+        if isinstance(e, float):
+            e = Time(e, format=self.epoch_format, scale=self.epoch_scale)
         self._epoch = e
         self._calc_transits()
     
     @period.setter
-    def period(self, p: float) -> None:
+    def period(self, p: u.Quantity | None) -> None:
         self._period = p
         self._calc_transits()
     
     @duration.setter
-    def duration(self, d: float) -> None:
+    def duration(self, d: u.Quantity | None) -> None:
         self._duration = d
         self._calc_transits()
         
@@ -282,5 +307,26 @@ class Target():
         """Representation of the object."""
         s = f"{self.name} {self.star_name} ({self.ra_j2000} {self.dec_j2000}) - "
         s += f"[{self.epoch}, {self.period}, {self.duration}] @ {self.observation_time} for {self.observation_duration} : "
-        s += f"{self.transits}"
+        s += f"{self.observable_mid_transit_times}"
         return s
+
+    def __eq__(self, other: Any):
+        """Equality..."""
+        if isinstance(other, Target):
+            return all([self.name == other.name,
+                        self.observatory == other.observatory,
+                        self.star_name == other.star_name,
+                        self.ra_j2000 == other.ra_j2000,
+                        self.dec_j2000 == other.dec_j2000,
+                        np.isclose(self.epoch.jd, other.epoch.jd, equal_nan=True),
+                        self.epoch_format == other.epoch_format,
+                        self.epoch_scale == other.epoch_scale,
+                        np.isclose(self.period, other.period, equal_nan=True),
+                        np.isclose(self.duration, other.duration, equal_nan=True),
+                        self.is_exoplanet == other.is_exoplanet,
+                        np.isclose(self.eccentricity, other.eccentricity, equal_nan=True),
+                        np.isclose(self.argument_of_periapsis, other.argument_of_periapsis, equal_nan=True),
+                        self.observation_time == other.observation_time,
+                        self.observation_duration == other.observation_duration                        
+            ])
+        return False

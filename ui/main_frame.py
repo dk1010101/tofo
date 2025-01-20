@@ -207,7 +207,7 @@ class MainFrame(wx.Frame):
         # have_targets: bool = False
         for ridx, target in enumerate(self.targets):
             self.vis_update_target_grid_row(ridx)
-            if self.ax and target.transits:
+            if self.ax and target.observable_mid_transit_times:
                 tds = target.get_transit_details()
                 if tds:
                     obs_start = tds[0][0]
@@ -235,7 +235,7 @@ class MainFrame(wx.Frame):
         obj: Target = self.targets[row_idx]
         end_time = obj.observation_time + obj.observation_duration
         
-        if obj.transits:
+        if obj.observable_mid_transit_times:
             col = wx.WHITE
         else:
             col = wx.LIGHT_GREY
@@ -247,7 +247,7 @@ class MainFrame(wx.Frame):
         self.grid_targets.SetCellValue(row_idx, 2, end_time.iso[:-7])
         self.grid_targets.SetCellValue(row_idx, 3, obj.ra_j2000)
         self.grid_targets.SetCellValue(row_idx, 4, obj.dec_j2000)
-        self.grid_targets.SetCellValue(row_idx, 5, 'T' if obj.transits else 'F')
+        self.grid_targets.SetCellValue(row_idx, 5, 'T' if obj.observable_mid_transit_times else 'F')
 
     def vis_refresh_datetimes(self) -> None:
         """Update the datetime widgets."""
