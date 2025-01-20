@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore crota exoclock
 import csv
+import datetime
 from typing import Tuple, List, NamedTuple, Any
 
 import numpy as np
@@ -33,13 +34,15 @@ class Observatory:
         self.location: EarthLocation = EarthLocation.from_geodetic(lon=data['observatory']['lon_deg'] * u.deg, 
                                                                    lat=data['observatory']['lat_deg'] * u.deg, 
                                                                    height=data['observatory']['elevation_m'] * u.m)
+        timezone = data['observatory']['time_zone']
         self.observer: Observer = Observer(location=self.location, 
                                            name=data['observatory']['name'], 
-                                           timezone=data['observatory']['time_zone'], 
+                                           timezone=timezone, 
                                            temperature=data['observatory']['temperature_C'] * u.deg_C, 
                                            pressure=data['observatory']['pressure_hPa'] * u.hPa, 
                                            relative_humidity=data['observatory']['rel_humidity_percentage'] / 100.0)
-    
+        tnow = datetime.datetime.now(self.observer.timezone)
+        self.timezone_offset = tnow.utcoffset().total_seconds() * u.s
         self.focal_length: u.Quantity = data['telescope']['focal_length_mm'] * u.mm
         self.aperture: u.Quantity = data['telescope']['aperture_mm'] * u.mm
         self.sensor_size_px: Tuple[int, int] = (data['telescope']['sensor']['num_pix_x'], data['telescope']['sensor']['num_pix_y'])

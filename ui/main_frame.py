@@ -1,9 +1,11 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm
 import csv
+import datetime
 from datetime import datetime
 from typing import List
 
+import pytz
 import numpy as np
 
 import astropy.units as u
@@ -46,7 +48,8 @@ class MainFrame(wx.Frame):
         self.SetSize((750, 900))
         self.SetTitle("Target of opportunity tool")
 
-        ft_section = wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        ft_section = self.GetFont()
+        ft_section.SetPointSize(11)
 
         self.frame_menubar = wx.MenuBar()
         wxglade_tmp_menu = wx.Menu()
@@ -68,16 +71,57 @@ class MainFrame(wx.Frame):
         label_obs_title.SetFont(ft_section)
         sizer_main.Add(label_obs_title, 1, wx.EXPAND|wx.ALL, margin_size)
 
-        sizer_observation_dt = wx.FlexGridSizer(1, 12, 3, 0)
+        sizer_observation_dt = wx.FlexGridSizer(2, 13, 3, 0)
         sizer_main.Add(sizer_observation_dt, 1, wx.EXPAND, 0)
+        # row 1: -xDT-xDT-x-
+        row_1_colour = (180, 180, 180)
         sizer_observation_dt.Add((50, 20), 0, 0, 0)
+        label_t_1 = wx.StaticText(self.panel_main, wx.ID_ANY, "Local Time")
+        label_bold_font = label_t_1.GetFont()
+        label_bold_font.SetWeight(wx.FONTWEIGHT_EXTRABOLD)
+        label_t_1.SetFont(label_bold_font)
+        label_t_1.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(label_t_1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, 0)
+        sizer_observation_dt.Add((10, 20), 0, 0, 0)
+        label_gdt_l_1 = wx.StaticText(self.panel_main, wx.ID_ANY, "Start Time")
+        label_gdt_l_1.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(label_gdt_l_1, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        self.dp_l_start = wx.adv.DatePickerCtrl(self.panel_main, wx.ID_ANY)
+        self.dp_l_start.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(self.dp_l_start, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        self.tp_l_start = wx.adv.TimePickerCtrl(self.panel_main, wx.ID_ANY)
+        self.tp_l_start.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(self.tp_l_start, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        sizer_observation_dt.Add((30, 20), 0, 0, 0)
+        label_gdt_l_2 = wx.StaticText(self.panel_main, wx.ID_ANY, "End Time")
+        label_gdt_l_2.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(label_gdt_l_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        self.dp_l_end = wx.adv.DatePickerCtrl(self.panel_main, wx.ID_ANY)
+        self.dp_l_end.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(self.dp_l_end, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        self.tp_l_end = wx.adv.TimePickerCtrl(self.panel_main, wx.ID_ANY)
+        self.tp_l_end.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(self.tp_l_end, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        tztzlabel = wx.StaticText(self.panel_main, wx.ID_ANY, "TZ: ")
+        tztzlabel.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(tztzlabel, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, 0)
+        tzlabel = wx.StaticText(self.panel_main, wx.ID_ANY, str(self.observatory.observer.timezone))
+        tzlabel.SetForegroundColour(row_1_colour)
+        sizer_observation_dt.Add(tzlabel, 0, wx.ALIGN_CENTER_VERTICAL| wx.ALIGN_CENTER, 0)
+        sizer_observation_dt.Add((50, 20), 0, 0, 0)
+        # row 1: -xDT-xDT-b-
+        sizer_observation_dt.Add((50, 20), 0, 0, 0)
+        label_t_2 = wx.StaticText(self.panel_main, wx.ID_ANY, "UTC")
+        label_t_2.SetFont(label_bold_font)
+        sizer_observation_dt.Add(label_t_2, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, 0)
+        sizer_observation_dt.Add((10, 20), 0, 0, 0)
         label_gdt_1 = wx.StaticText(self.panel_main, wx.ID_ANY, "Start Time")
         sizer_observation_dt.Add(label_gdt_1, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         self.dp_start = wx.adv.DatePickerCtrl(self.panel_main, wx.ID_ANY)
         sizer_observation_dt.Add(self.dp_start, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         self.tp_start = wx.adv.TimePickerCtrl(self.panel_main, wx.ID_ANY)
         sizer_observation_dt.Add(self.tp_start, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_observation_dt.Add((50, 20), 0, 0, 0)
+        sizer_observation_dt.Add((30, 20), 0, 0, 0)
         label_gdt_2 = wx.StaticText(self.panel_main, wx.ID_ANY, "End Time")
         sizer_observation_dt.Add(label_gdt_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         self.dp_end = wx.adv.DatePickerCtrl(self.panel_main, wx.ID_ANY)
@@ -86,7 +130,7 @@ class MainFrame(wx.Frame):
         sizer_observation_dt.Add(self.tp_end, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_observation_dt.Add((50, 20), 0, 0, 0)
         self.bt_dt_apply_all = wx.Button(self.panel_main, wx.ID_ANY, "Apply to All")
-        sizer_observation_dt.Add(self.bt_dt_apply_all, 0, wx.ALIGN_CENTER_VERTICAL| wx.ALIGN_CENTER, 0)
+        sizer_observation_dt.Add(self.bt_dt_apply_all, 0, wx.EXPAND, 0)
         sizer_observation_dt.Add((50, 20), 0, 0, 0)
         
         # target grid label
@@ -99,8 +143,8 @@ class MainFrame(wx.Frame):
         self.grid_targets.SetMinSize((500,250))
         self.grid_targets.CreateGrid(0, 6)
         self.grid_targets.SetColLabelValue(0, "Name")
-        self.grid_targets.SetColLabelValue(1, "Start Time")
-        self.grid_targets.SetColLabelValue(2, "End Time")
+        self.grid_targets.SetColLabelValue(1, "UTC Start Time")
+        self.grid_targets.SetColLabelValue(2, "UTC End Time")
         self.grid_targets.SetColLabelValue(3, "RA")
         self.grid_targets.SetColLabelValue(4, "DEC")
         self.grid_targets.SetColLabelValue(5, "All Vis")
@@ -153,6 +197,10 @@ class MainFrame(wx.Frame):
         self.bt_refresh_targets.Bind(wx.EVT_BUTTON, self.on_bt_refresh_targets)
         self.bt_add_row.Bind(wx.EVT_BUTTON, self.on_bt_add_row)
         self.bt_del_row.Bind(wx.EVT_BUTTON, self.on_bt_del_row)
+        self.dp_l_start.Bind(wx.adv.EVT_DATE_CHANGED, self.on_tdp_l_start_change)
+        self.tp_l_start.Bind(wx.adv.EVT_TIME_CHANGED, self.on_tdp_l_start_change)
+        self.dp_l_end.Bind(wx.adv.EVT_DATE_CHANGED, self.on_tdp_l_end_change)
+        self.tp_l_end.Bind(wx.adv.EVT_TIME_CHANGED, self.on_tdp_l_end_change)
         self.dp_start.Bind(wx.adv.EVT_DATE_CHANGED, self.on_tdp_start_change)
         self.tp_start.Bind(wx.adv.EVT_TIME_CHANGED, self.on_tdp_start_change)
         self.dp_end.Bind(wx.adv.EVT_DATE_CHANGED, self.on_tdp_end_change)
@@ -176,8 +224,8 @@ class MainFrame(wx.Frame):
         """Set the possible observation times to civil darkness for today."""
         now = datetime.now()
         obs_time = Time(now.isoformat()[:10]+"T23:00:00.0")
-        self.start_time = self.observatory.observer.twilight_evening_civil(obs_time)
-        self.end_time = self.observatory.observer.twilight_morning_civil(obs_time)
+        self.start_time = self.observatory.observer.twilight_evening_civil(obs_time) - self.observatory.timezone_offset
+        self.end_time = self.observatory.observer.twilight_morning_civil(obs_time) - self.observatory.timezone_offset
         self.vis_refresh_datetimes()
    
     def plot_horizon(self):
@@ -254,15 +302,27 @@ class MainFrame(wx.Frame):
         st = self.start_time.jd
         et = self.end_time.jd
         
+        st_l = (self.start_time + self.observatory.timezone_offset).jd
+        et_l = (self.end_time + self.observatory.timezone_offset).jd
+        
         if et < st:
             wx.MessageBox("End time cannot be before start time!", "Like, Doh! Dude!", wx.OK | wx.ICON_ERROR)
             self.end_time = self.start_time + 1 * u.hour
             et = self.end_time.jd
-        
-        self.dp_start.SetValue(wx.DateTime.FromJDN(st))
-        self.tp_start.SetValue(wx.DateTime.FromJDN(st))
-        self.dp_end.SetValue(wx.DateTime.FromJDN(et))
-        self.tp_end.SetValue(wx.DateTime.FromJDN(et))
+            et_l = (self.end_time + self.observatory.timezone_offset).jd
+
+        utc_s = wx.DateTime.FromJDN(st)
+        utc_e = wx.DateTime.FromJDN(et)
+        local_s = wx.DateTime.FromJDN(st_l)
+        local_e = wx.DateTime.FromJDN(et_l)
+        self.dp_start.SetValue(utc_s)
+        self.tp_start.SetValue(utc_s)
+        self.dp_end.SetValue(utc_e)
+        self.tp_end.SetValue(utc_e)
+        self.dp_l_start.SetValue(local_s)
+        self.tp_l_start.SetValue(local_s)
+        self.dp_l_end.SetValue(local_e)
+        self.tp_l_end.SetValue(local_e)
 
     def vis_update_target_grid_size(self):
         """Resize the grid to match the data that we have."""
@@ -327,6 +387,22 @@ class MainFrame(wx.Frame):
     def on_menu_exit_app(self, event):  # pylint:disable=unused-argument
         """Exit the app cleanly."""
         wx.CallAfter(self.Destroy)
+
+    def on_tdp_l_start_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
+        tm1 = self.dp_l_start.GetValue().GetTm()
+        tm2 = self.tp_l_start.GetValue().GetTm()
+        t = Time(f"{tm1.year}-{tm1.mon+1:02d}-{tm1.mday:02d}T{tm2.hour}:{tm2.min}:{tm2.sec}")  # TODO: there has to be a nicer way!
+        t = t - self.observatory.timezone_offset
+        self.start_time = t
+        self.vis_refresh_datetimes()
+        
+    def on_tdp_l_end_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
+        tm1 = self.dp_l_end.GetValue().GetTm()
+        tm2 = self.tp_l_end.GetValue().GetTm()
+        t = Time(f"{tm1.year}-{tm1.mon+1:02d}-{tm1.mday:02d}T{tm2.hour}:{tm2.min}:{tm2.sec}")  # TODO: there has to be a nicer way!
+        t = t - self.observatory.timezone_offset
+        self.end_time = t
+        self.vis_refresh_datetimes()
 
     def on_tdp_start_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
         """Get the date and time from the two separate pickers and create the start datetime from that."""
