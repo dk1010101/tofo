@@ -119,9 +119,10 @@ class Target():
                 ]):
                 
             if self.epoch is not None and self.period is not None:  # it is a transit-like thing
-                duration = 1. * u.minute  # in case we don't have duration, we will just assume it is something short
                 if self.duration is None:
-                    duration = self.duration * u.hour  # if we have the duration (transit, eclipse) then use it
+                    duration = 1. * u.minute  # in case we don't have duration, we will just assume it is something short
+                else:
+                    duration = self.duration
                 self.eclipsing_system = EclipsingSystem(primary_eclipse_time=self.epoch, 
                                                         orbital_period=self.period, 
                                                         duration=duration, 
@@ -171,11 +172,20 @@ class Target():
             )
         return visibility
     
+    def get_transit_details(self) -> list:
+        """return all the timing details for the first visible transit, if any."""
+        if not self.observable_mid_transit_times:
+            return []
+        first_visible_transit = self.observable_mid_transit_times[0]
+        return self._transit_times(first_visible_transit)
+    
     def _transit_times(self, t: Time) -> Tuple[Tuple[Time, Time, Time, Time, Time], Tuple[Time, Time, Time, Time, Time]]:
         """For some mid-transit time, get full set of transit times as a tuple along with a tuple containing those times 
         adjusted for the barycentric offset."""
         d: u.Quantity = 0.1  # random duration of 6 mins
         if self.duration is None or np.isnan(self.duration):
+            d = 0.5 / 60.0  # 1/2 minute
+        else:
             d = self.duration / 2.0  # since offset if 1/2 the duration from the mid-point...
         d *= u.hour
         

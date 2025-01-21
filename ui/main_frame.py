@@ -24,14 +24,14 @@ from ui.target_dialog import TargetDialog
 from tofo.observatory import Observatory
 from tofo.targets import Target
 from tofo.ui_mpl_canvas import MatplotlibCanvas
-
+from tofo.sources.object_db import ObjectDB
 
 class MainFrame(wx.Frame):
     """The main UI frame."""
     
     def __init__(self, *args, **kwds):
         """Create the UI."""
-        
+        self.objectdb: ObjectDB        
         margin_size = 8
         
         self.observatory: Observatory = kwds['observatory']
@@ -47,6 +47,8 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((750, 900))
         self.SetTitle("Target of opportunity tool")
+
+        # TODO: popup splash since loading dbs can take a while
 
         ft_section = self.GetFont()
         ft_section.SetPointSize(11)
@@ -215,7 +217,8 @@ class MainFrame(wx.Frame):
         
         self.set_datetimes()
         self.vis_refresh_targets()
-
+        
+        
     
     ########################################
     # HELPERS
@@ -389,6 +392,7 @@ class MainFrame(wx.Frame):
         wx.CallAfter(self.Destroy)
 
     def on_tdp_l_start_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
+        """Get the local date/teim and update."""
         tm1 = self.dp_l_start.GetValue().GetTm()
         tm2 = self.tp_l_start.GetValue().GetTm()
         t = Time(f"{tm1.year}-{tm1.mon+1:02d}-{tm1.mday:02d}T{tm2.hour}:{tm2.min}:{tm2.sec}")  # TODO: there has to be a nicer way!
@@ -397,6 +401,7 @@ class MainFrame(wx.Frame):
         self.vis_refresh_datetimes()
         
     def on_tdp_l_end_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
+        """Get the local date/teim and update."""
         tm1 = self.dp_l_end.GetValue().GetTm()
         tm2 = self.tp_l_end.GetValue().GetTm()
         t = Time(f"{tm1.year}-{tm1.mon+1:02d}-{tm1.mday:02d}T{tm2.hour}:{tm2.min}:{tm2.sec}")  # TODO: there has to be a nicer way!
@@ -443,14 +448,13 @@ class MainFrame(wx.Frame):
                 
                 start_time = self.targets[r].observation_time
                 d = self.targets[r].observation_duration
-                nt = Target(observatory=self.observatory, 
-                            name=value, 
-                            observation_time=start_time,
-                            observation_duration=d)
-                has_details: bool = nt.lookup_object_details()
-                if not has_details:
+                with wx.BusyCursor():
+                    new_target = self.objectdb.find_object(value)
+                new_target.observation_time = start_time
+                new_target.observation_duration = d
+                if not new_target:
                     wx.MessageBox("Failed to load object details for the object.\nCheck the name and try again.", "Hmmmmm....", wx.OK|wx.ICON_QUESTION)
-                self.targets[r] = nt
+                self.targets[r] = new_target
             except ValueError as e:
                 wx.MessageBox(f'Failed to get coordinates for object {value}!\nPlease change it and try again.\n\nError:\n{e}', 'Like, Doh!', wx.OK | wx.ICON_ERROR)
         elif c == 1:
