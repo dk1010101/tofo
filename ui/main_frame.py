@@ -47,7 +47,7 @@ class MainFrame(wx.Frame):
         
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((750, 900))
+        self.SetSize((900, 900))
         self.SetTitle("Target of opportunity tool")
 
         # TODO: popup splash since loading dbs can take a while
@@ -144,19 +144,30 @@ class MainFrame(wx.Frame):
         
         # target grid
         self.grid_targets: wx.grid.Grid = wx.grid.Grid(self.panel_main, wx.ID_ANY)
-        self.grid_targets.SetMinSize((500,250))
-        self.grid_targets.CreateGrid(0, 6)
+        self.grid_targets.SetMinSize((700, 250))
+        self.grid_targets.CreateGrid(0, 11)
         self.grid_targets.SetColLabelValue(0, "Name")
-        self.grid_targets.SetColLabelValue(1, "UTC Start Time")
-        self.grid_targets.SetColLabelValue(2, "UTC End Time")
+        self.grid_targets.SetColLabelValue(1, "UTC Obs Start")
+        self.grid_targets.SetColLabelValue(2, "UTC Obs End")
         self.grid_targets.SetColLabelValue(3, "RA")
         self.grid_targets.SetColLabelValue(4, "DEC")
         self.grid_targets.SetColLabelValue(5, "All Vis")
-        self.grid_targets.SetColSize(0, 25*5)
-        self.grid_targets.SetColSize(1, 25*5)
-        self.grid_targets.SetColSize(2, 25*5)
-        self.grid_targets.SetColSize(3, 15*5)
-        self.grid_targets.SetColSize(4, 15*5)
+        self.grid_targets.SetColLabelValue(6, "Before Ingress")
+        self.grid_targets.SetColLabelValue(7, "T Start")
+        self.grid_targets.SetColLabelValue(8, "T Mid")
+        self.grid_targets.SetColLabelValue(9, "T End")
+        self.grid_targets.SetColLabelValue(10, "After Egress")
+        self.grid_targets.SetColSize(0, 22*5)
+        self.grid_targets.SetColSize(1, 21*5)
+        self.grid_targets.SetColSize(2, 21*5)
+        self.grid_targets.SetColSize(3, 19*5)
+        self.grid_targets.SetColSize(4, 19*5)
+        self.grid_targets.SetColSize(5, 10*5)
+        self.grid_targets.SetColSize(6, 21*5)
+        self.grid_targets.SetColSize(7, 21*5)
+        self.grid_targets.SetColSize(8, 21*5)
+        self.grid_targets.SetColSize(9, 21*5)
+        self.grid_targets.SetColSize(10, 21*5)
         sizer_main.Add(self.grid_targets, 5, wx.EXPAND|wx.LEFT|wx.RIGHT, margin_size)
 
         # target grid manipulation buttons
@@ -286,7 +297,7 @@ class MainFrame(wx.Frame):
         self.grid_targets.ClearSelection()
         
         obj: Target = self.targets[row_idx]
-        end_time = obj.observation_time + obj.observation_duration
+        end_time = obj.observation_end_time
         
         if obj.observable_targets_all_times:
             col = wx.WHITE
@@ -294,13 +305,26 @@ class MainFrame(wx.Frame):
             col = wx.LIGHT_GREY
         for i in range(self.grid_targets.GetNumberCols()):
             self.grid_targets.SetCellBackgroundColour(row_idx, i, col)
-            
+
         self.grid_targets.SetCellValue(row_idx, 0, obj.name)
         self.grid_targets.SetCellValue(row_idx, 1, obj.observation_time.iso[:-7])
         self.grid_targets.SetCellValue(row_idx, 2, end_time.iso[:-7])
         self.grid_targets.SetCellValue(row_idx, 3, obj.ra_j2000)
         self.grid_targets.SetCellValue(row_idx, 4, obj.dec_j2000)
         self.grid_targets.SetCellValue(row_idx, 5, 'T' if obj.observable_targets_all_times else 'F')
+        if obj.observable_targets_all_times:
+            _, td = obj.get_transit_details(True)
+            self.grid_targets.SetCellValue(row_idx, 6, td[0].iso[:-7])
+            self.grid_targets.SetCellValue(row_idx, 7, td[1].iso[:-7])
+            self.grid_targets.SetCellValue(row_idx, 8, td[2].iso[:-7])
+            self.grid_targets.SetCellValue(row_idx, 9, td[3].iso[:-7])
+            self.grid_targets.SetCellValue(row_idx, 10, td[4].iso[:-7])
+        else:
+            self.grid_targets.SetCellValue(row_idx, 6, '')
+            self.grid_targets.SetCellValue(row_idx, 7, '')
+            self.grid_targets.SetCellValue(row_idx, 8, '')
+            self.grid_targets.SetCellValue(row_idx, 9, '')
+            self.grid_targets.SetCellValue(row_idx, 10, '')
 
     def vis_refresh_datetimes(self) -> None:
         """Update the datetime widgets."""
