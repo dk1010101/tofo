@@ -1,10 +1,13 @@
+# -*- coding: UTF-8 -*-
 import threading
 
 
 class ThreadWithReturnValue(threading.Thread):
     """Simple implementation of a thread that returns a value."""
     def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs={}, Verbose=None):
+                 args=(), kwargs=None, Verbose=None): # pylint:disable=unused-argument
+        if kwargs is None:
+            kwargs = {}
         threading.Thread.__init__(self, group, target, name, args, kwargs)
         self._return = None
 

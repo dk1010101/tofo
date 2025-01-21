@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore AAVSO VSX AUID
+# cSpell:ignore AAVSO VSX AUID hmsdms
 import logging
 from pathlib import Path
 from typing import Dict
@@ -7,6 +7,8 @@ import numpy as np
 import h5py
 import requests
 
+import astropy.units as u
+from astropy.coordinates import SkyCoord
 from astropy.table import Table
 
 from tofo.targets import Target
@@ -25,14 +27,19 @@ class VSX(Source):
     def __init__(self, observatory: Observatory, cache_life_days: float | None = None):
         super().__init__(observatory, cache_life_days)
         self.log = logging.getLogger()
-        self.exoplanets_data: Table = Table(names=("Name", "AUID", "RA2000", "Declination2000","VariabilityType",
-                                                   "Period", "Epoch", "EclipseDuration",
+        self.exoplanets_data: Table = Table(names=("Name", "AUID", "OID", "Constellation", 
+                                                   "RA2000", "Declination2000", "RA DEC",
+                                                   "VariabilityType",
                                                    "MaxMag", "MinMag",
-                                                   "Category", "OID", "Constellation"),
-                                            dtype=("str", "str", "f8", "f8", "str", 
+                                                   "Period", "Epoch", "EclipseDuration",
+                                                   "SpectralType", "Category"),
+                                            dtype=("str", "str", "str", "str", 
+                                                   "str", "str", "str", 
+                                                   "str", 
+                                                   "str", "str", 
                                                    "f8", "f8", "f8", 
                                                    "str", "str", 
-                                                   "str", "str", "str"))
+                                                   ))
         self.exoplanets: Dict[str, Target] = {}
         self._load_data()
         
@@ -88,35 +95,71 @@ class VSX(Source):
             return None
         js = response.json()
         if 'VSXObject' in js and js['VSXObject']:
-            new_row = [
-                name,
-                js['VSXObject'].get('AUID', ''),
-                js['VSXObject']['RA2000'],
-                js['VSXObject']['Declination2000'],
-                js['VSXObject'].get('VariabilityType', ''),
-                np.float64(js['VSXObject'].get('Period', np.nan)),
-                np.float64(js['VSXObject'].get('Epoch', np.nan)),
-                np.float64(js['VSXObject'].get('EclipseDuration', np.nan)),
-                js['VSXObject'].get('MaxMag', ''),
-                js['VSXObject'].get('MinMag', ''),
-                js['VSXObject'].get('Category', ''),
-                js['VSXObject'].get('OID', ''),
-                js['VSXObject'].get('Constellation', ''),
-            ]
-            self.exoplanets_data.add_row(new_row)
-            fix_str_types(self.exoplanets_data)  # expensive but ...
-            self.exoplanets_data.write(self.cache_file, path=self.name, append=True, overwrite=True)
-            self.update_age()
-            
-            t =  create_target(self.observatory,
-                               name,
-                               js['VSXObject']['RA2000'], 
-                               js['VSXObject']['Declination2000'],
-                               js['VSXObject'].get('Epoch', ''), 
-                               js['VSXObject'].get('Period', ''),
-                               js['VSXObject'].get('EclipseDuration', ''))
-            self.exoplanets[name] = t
+            t, _ = self.add_vsx_js_object(name, js['VSXObject'])
             return t
+        else:
+            return None
+
+    def _cleanup_vsx_row(self, row: list) -> None:
+        """Clean up and numerical values so that they are actually parsable numbers."""
+        def conv_float(a):
+            if a:
+                return np.float64(a)
+            else:
+                return np.nan
+        # MaxMag, MinMag, Period, Epoch and EclipseDuration
+        row[8] = row[8].replace(":", "").replace("*", "")
+        row[9] = row[9].replace(":", "").replace("*", "")
+        row[10] = row[10].replace(":", "").replace("*", "")
+        row[11] = row[11].replace(":", "").replace("*", "")
+        row[12] = row[12].replace(":", "").replace("*", "")
+        # conv Period, Epoch and EclipseDuration to floats
+        row[10] = conv_float(row[10])
+        row[11] = conv_float(row[11])
+        row[12] = conv_float(row[12])
+        
+
+    def add_vsx_js_object(self, js: dict, ret_row: bool = False):
+        """Add a new object to the cache and clean it up."""
+        c = SkyCoord(ra=float(js['RA2000'])*u.degree, dec=float(js['Declination2000'])*u.degree)
+        name = js['Name']
+        new_row = [
+                name,
+                js.get('AUID', ''),
+                js.get('OID', ''),
+                js.get('Constellation', ''),
+                js['RA2000'],
+                js['Declination2000'],
+                c.to_string('hmsdms'),
+                js.get('VariabilityType', ''),
+                js.get('MaxMag', ''),
+                js.get('MinMag', ''),
+                js.get('Period', ''),
+                js.get('Epoch', ''),
+                js.get('EclipseDuration', ''),
+                js.get('SpectralType', ''),
+                js.get('Category', '')
+            ]
+        print(new_row)
+        self._cleanup_vsx_row(new_row)
+        print(new_row)
+        self.exoplanets_data.add_row(new_row)
+        fix_str_types(self.exoplanets_data)  # expensive but ...
+        self.exoplanets_data.write(self.cache_file, path=self.name, append=True, overwrite=True)
+        self.update_age()
+            
+        t =  create_target(self.observatory,
+                               new_row[0],
+                               new_row[4], 
+                               new_row[5],
+                               new_row[11], 
+                               new_row[10],
+                               new_row[12])
+        self.exoplanets[name] = t
+        if ret_row:
+            return t, new_row
+        else:
+            return t, []
 
     def _path_exists(self) -> bool:
         """Check if the correct path exists in the HDF5 file."""        

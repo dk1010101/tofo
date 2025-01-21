@@ -21,6 +21,7 @@ import wx.adv
 import wx.grid
 
 from ui.target_dialog import TargetDialog
+from ui.loading_dialog import LoadingDialog
 from tofo.observatory import Observatory
 from tofo.targets import Target
 from tofo.exoclock_targets import ExoClockTargets
@@ -485,8 +486,12 @@ class MainFrame(wx.Frame):
             return
         ridx = event.GetRow()
         d = TargetDialog(self, f"Targets of opportunity for '{self.targets[ridx].name}'")
+        
+        loading_d = LoadingDialog(self, "Loading targets...", "Please wait. Loading Targets.")
+        d.init(observatory=self.observatory, objectdb=self.objectdb, target=self.targets[ridx], loading_dlg=loading_d)
+        loading_d.Destroy()
+        
         d.Show()
-        d.init(observatory=self.observatory, target=self.targets[ridx])
 
     def on_bt_add_row(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
         """Add a new row to the bottom of the targets grid."""

@@ -1,8 +1,6 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore AAVSO NAXIS CUNIT1 CUNIT2 CDELT1 CDELT2 CRPIX1 CRPIX2 CRVAL1 CRVAL2 CROTA1 CROTA2 auid radec tomag hmsdms
 
-# TODO: add loading progress something
-
 import math
 import copy 
 
@@ -27,19 +25,23 @@ import wx
 import wx.grid
 # end wxGlade
 
+from ui.loading_dialog import LoadingDialog
 from tofo.ui_mpl_canvas import MatplotlibCanvas
 from tofo.observatory import Observatory
 from tofo.targets import Target
+from tofo.sources.object_db import ObjectDB
 
 
 class TargetDialog(wx.Dialog):
     """Dialog for showing all targets of opportunity based on some central object of interest."""
     
-    grid_col_names = ['Name', 'AUID', 'OID', 'Const', 'RA deg', 'DEC deg', 'RA DEC', 'Var Type', 'Min Mag', 'Max Mag', 'Period', 'Epoch', 'Duration', 'Spec Type', 'Event ISO', 'Event JD']
+    grid_col_names = ['Name', 'AUID', 'OID', 'Const', 'RA deg', 'DEC deg', 'RA DEC', 'Var Type', 'Min Mag', 'Max Mag', 'Period', 'Epoch', 'Duration', 'Spec Type', 'Category', 'Event ISO', 'Event JD']
     
     def __init__(self, parent, title="", win_size=(800,800)):
         """Create the UI"""
+        self.loading_dalog: LoadingDialog
         self.observatory: Observatory
+        self.objectdb: ObjectDB
         self.ax = None
         self.target: Target
         self.df: pd.DataFrame
@@ -87,11 +89,17 @@ class TargetDialog(wx.Dialog):
         
         self.Layout()
 
-    def init(self, observatory: Observatory, target: Target):
+    def init(self, 
+             observatory: Observatory, 
+             objectdb: ObjectDB,
+             target: Target, 
+             loading_dlg: LoadingDialog):
         """Initialise the object. """
         with wx.BusyCursor():
+            self.loading_dalog = loading_dlg
             self.target = target
             self.observatory: Observatory = observatory
+            self.objectdb: ObjectDB = objectdb
             
             self.get_tofos()
     
@@ -174,36 +182,16 @@ class TargetDialog(wx.Dialog):
         
         rows = []
         for s in stars:
-            n = s['Name']
             
-            c = SkyCoord(ra=float(s['RA2000'])*u.degree, dec=float(s['Declination2000'])*u.degree)
+            _, base_row = self.objectdb.vsx.add_vsx_js_object(s, ret_row=True)
             if sky_region:
+                c = SkyCoord(ra=float(base_row[4]) * u.degree, dec=float(base_row[5]) * u.degree)
                 if not sky_region.contains(c, wcs):
-                    print(f"skipping {n} since it is not in the sky region")
+                    print(f"skipping {base_row[0]} since it is not in the sky region")
                     continue
-            # grid_col_names = ['Name', 'AUID', 'OID', 'Const', 'RA deg', 'DEC deg', 
-            #                   'RA DEC', 'Var Type', 'Min Mag', 'Max Mag', 
-            #                   'Period', 'Epoch', 'Eclipse Duration', 'Spec Type', 
-            #                   'Event ISO', 'Event JD']
-    
-            base_row = [
-                s['Name'],
-                s.get("AUID", ""),
-                s.get("OID", ""),
-                s.get('Constellation', ''),
-                s['RA2000'], 
-                s['Declination2000'], 
-                c.to_string('hmsdms'),
-                s.get('VariabilityType', 'NA'), 
-                s.get('MinMag', ''), 
-                s.get('MaxMag', ''),
-                s.get("Period", np.nan),
-                s.get("Epoch", np.nan),
-                s.get("EclipseDuration", np.nan),
-                s.get("SpectralType", ""),
-            ]   
-            if s.get("Epoch", False) and s.get("Period", False):
-                eph = self._get_eph(float(s['Epoch']), float(s['Period']), self.target.observation_time, self.target.observation_end_time)
+
+            if not np.isnan(base_row[11]) and not np.isnan(base_row[10]):
+                eph = self._get_eph(base_row[11], base_row[10], self.target.observation_time, self.target.observation_end_time)
                 if eph:
                     for e in eph:
                         row = copy.deepcopy(base_row)
@@ -211,14 +199,14 @@ class TargetDialog(wx.Dialog):
                         row.append(e.jd)
                         rows.append(row)
                 else:
-                    print(f"skipping {n} since there are no events for this object. epoch={s['Epoch']} period={s['Period']}")
+                    print(f"skipping {base_row[0]} since there are no events for this object. epoch={base_row[11]} period={base_row[10]}")
             else:
                 row = copy.deepcopy(base_row)
                 row.append('')
                 row.append(0.0)
         df = pd.DataFrame(rows, columns=['name', 'auid', 'oid', 'constellation', 'ra_deg', 'dec_deg', 
                                          'radec', 'var_type', 'min_mag', 'max_mag', 
-                                         'period', 'epoch', 'eclipse_duration', 'spectral_type', 
+                                         'period', 'epoch', 'eclipse_duration', 'spectral_type', 'category',
                                          'event_iso', 'event_jd'])
         return df, wcs
 
@@ -272,6 +260,7 @@ class TargetDialog(wx.Dialog):
 
     def get_tofos(self):
         """Get all targets of opportunity, add them to the grid and plot them on the sky image."""
+        self.loading_dalog.set_message("Loading targets...")
         self.df, wcs = self._get_all_fov()
         
         arr = self.df.to_numpy()
@@ -287,7 +276,6 @@ class TargetDialog(wx.Dialog):
             for cidx, val in enumerate(row):
                 self.grid_tofo.SetCellValue(ridx, cidx, str(val))
         
+        self.loading_dalog.set_message("Loading sky image...")
         self._show_tofo(wcs)
-        
-        if len(self.df) == 0:
-            wx.MessageBox(f'There are no targets of opportunity for {self.target.name}\nfor observations between {self.target.observation_time.iso[:16]} and {self.target.observation_end_time.iso[:16]}', 'Shame...', wx.OK | wx.ICON_WARNING)
+        self.loading_dalog = None

@@ -1,5 +1,8 @@
+# -*- coding: UTF-8 -*-
+# cSpell:ignore tofo
+
 import wx
-from wx.adv import SplashScreen as SplashScreen
+from wx.adv import SplashScreen
 
 
 class TofoSplashScreen(SplashScreen):
@@ -18,7 +21,8 @@ class TofoSplashScreen(SplashScreen):
                                                size=wx.DefaultSize,
                                                style=wx.STAY_ON_TOP | wx.BORDER_NONE)
         self.Bind(wx.EVT_CLOSE, self.OnExit)
-    #-----------------------------------------------------------------------
-    def OnExit(self, event):
+
+    def OnExit(self, event):  # pylint:disable=invalid-name  # since wx naming is borked
+        """handler for close window message - here for completeness."""
         event.Skip()  # Make sure the default handler runs too...
         self.Hide()

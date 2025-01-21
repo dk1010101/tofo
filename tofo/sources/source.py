@@ -68,5 +68,12 @@ class Source(ABC):
     def update_age(self) -> None:
         """Set the local age to zero and update the age table with the update time (now)."""
         self.age_days = 0 * u.day
-        self.ages_table.add_row([self.name, datetime.now().isoformat()])
+        dt_iso = datetime.now().isoformat()
+        mask = self.ages_table['source'] == self.name
+        if any(mask):
+            # if the value exists, replace it
+            self.ages_table['age'][mask] = dt_iso
+        else:
+            # otherwise add a new row
+            self.ages_table.add_row([self.name, dt_iso])
         self.ages_table.write(self.cache_file, path='ages', append=True, overwrite=True)

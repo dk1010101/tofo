@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # pylint: disable=invalid-name
-import time
-import threading
 from yaml import load
 try:
     from yaml import CLoader as Loader
@@ -29,9 +27,7 @@ class TOFOApp(wx.App):
     @staticmethod
     def load_object_db(obs: Observatory) -> ObjectDB:
         """This will take a LONG time to run!"""
-        #odb = ObjectDB(obs)
-        time.sleep(5)
-        odb = None
+        odb = ObjectDB(obs)
         return odb
     
     def OnInit(self):
