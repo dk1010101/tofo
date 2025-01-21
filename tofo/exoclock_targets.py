@@ -1,10 +1,11 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock astropy
 from functools import lru_cache
-
+from typing import List
 from astropy.time import Time
 
 from tofo.sources.exoclock import ExoClock
+from tofo.targets import Target
 from tofo.observatory import Observatory
 
 
@@ -19,10 +20,12 @@ class ExoClockTargets():
         """
         self.observatory = observatory
         self.archive = ExoClock(self.observatory)
-        self.targets = self.archive.get_telescope_filtered_targets()
+        self.targets: List[Target] = self.archive.get_telescope_filtered_targets()
         self.get_all_transits = lru_cache(maxsize=None)(self._get_all_transits)
         
-    def _get_all_transits(self, time_start: Time, time_end: Time) -> list:
+    def _get_all_transits(self, time_start: Time, 
+                          time_end: Time,
+                          fully_visible: bool = True) -> List[Target]:
         """Return a list of all transits visible from the observatory between the start and end times.
         
         ..note:
@@ -41,4 +44,4 @@ class ExoClockTargets():
         for exo in self.targets:
             exo.observation_time = time_start
             exo.observation_end_time = time_end
-        return [t for t in self.targets if t.has_transits()]
+        return [t for t in self.targets if t.has_transits(fully_visible)]

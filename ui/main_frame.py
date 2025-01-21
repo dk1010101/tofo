@@ -23,6 +23,7 @@ import wx.grid
 from ui.target_dialog import TargetDialog
 from tofo.observatory import Observatory
 from tofo.targets import Target
+from tofo.exoclock_targets import ExoClockTargets
 from tofo.ui_mpl_canvas import MatplotlibCanvas
 from tofo.sources.object_db import ObjectDB
 
@@ -55,9 +56,9 @@ class MainFrame(wx.Frame):
 
         self.frame_menubar = wx.MenuBar()
         wxglade_tmp_menu = wx.Menu()
-        item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Load Targets", "")
+        item = wxglade_tmp_menu.Append(wx.ID_ANY, "Load Targets from &File", "")
         self.Bind(wx.EVT_MENU, self.on_menu_load_targets, item)
-        item = wxglade_tmp_menu.Append(wx.ID_ANY, "Find &Exoclock Targets", "")
+        item = wxglade_tmp_menu.Append(wx.ID_ANY, "Load &Exoclock Targets", "")
         self.Bind(wx.EVT_MENU, self.on_menu_load_exoclock, item)
         item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Exit", "")
         self.Bind(wx.EVT_MENU, self.on_menu_exit_app, item)
@@ -258,7 +259,7 @@ class MainFrame(wx.Frame):
         # have_targets: bool = False
         for ridx, target in enumerate(self.targets):
             self.vis_update_target_grid_row(ridx)
-            if self.ax and target.observable_mid_transit_times:
+            if self.ax and target.observable_targets_all_times:
                 tds = target.get_transit_details()
                 if tds:
                     obs_start = tds[0][0]
@@ -286,7 +287,7 @@ class MainFrame(wx.Frame):
         obj: Target = self.targets[row_idx]
         end_time = obj.observation_time + obj.observation_duration
         
-        if obj.observable_mid_transit_times:
+        if obj.observable_targets_all_times:
             col = wx.WHITE
         else:
             col = wx.LIGHT_GREY
@@ -298,7 +299,7 @@ class MainFrame(wx.Frame):
         self.grid_targets.SetCellValue(row_idx, 2, end_time.iso[:-7])
         self.grid_targets.SetCellValue(row_idx, 3, obj.ra_j2000)
         self.grid_targets.SetCellValue(row_idx, 4, obj.dec_j2000)
-        self.grid_targets.SetCellValue(row_idx, 5, 'T' if obj.observable_mid_transit_times else 'F')
+        self.grid_targets.SetCellValue(row_idx, 5, 'T' if obj.observable_targets_all_times else 'F')
 
     def vis_refresh_datetimes(self) -> None:
         """Update the datetime widgets."""
@@ -385,14 +386,21 @@ class MainFrame(wx.Frame):
 
     def on_menu_load_exoclock(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
         """Load targets from exoclock."""
-        print("TODO load exoclock")
+        if self.targets:
+            dlg = wx.MessageDialog(None, "Loading Exoclock targets will delete all existing targets.\nAre you sure you would like to proceed?", 'Load Exoplanets', wx.YES_NO | wx.ICON_QUESTION)
+            result = dlg.ShowModal()
+            if result == wx.ID_NO:
+                return
+        ex = ExoClockTargets(self.observatory)
+        self.targets = ex.get_all_transits(self.start_time, self.end_time, True)
+        self.vis_refresh_targets()
 
     def on_menu_exit_app(self, event):  # pylint:disable=unused-argument
         """Exit the app cleanly."""
         wx.CallAfter(self.Destroy)
 
     def on_tdp_l_start_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
-        """Get the local date/teim and update."""
+        """Get the local date/time and update."""
         tm1 = self.dp_l_start.GetValue().GetTm()
         tm2 = self.tp_l_start.GetValue().GetTm()
         t = Time(f"{tm1.year}-{tm1.mon+1:02d}-{tm1.mday:02d}T{tm2.hour}:{tm2.min}:{tm2.sec}")  # TODO: there has to be a nicer way!

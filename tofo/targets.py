@@ -67,7 +67,8 @@ class Target():
         self.is_exoplanet: bool = is_exoplanet
         self.c: SkyCoord = None
         self.target: FixedTarget = None
-        self.observable_mid_transit_times: list = []
+        self.observable_targets_all_times: list = []
+        self.observable_targets_some_times: list = []
         self.eccentricity = eccentricity
         self.argument_of_periapsis: u.Quantity = argument_of_periapsis
         
@@ -134,14 +135,18 @@ class Target():
             else:  # it is just a fixed object - so always visible
                 # TODO: fix non-exo main target observability
                 midtransit_times = [self.observation_time+self.observation_duration/2.0]
-            transit_observability = self.check_observability(midtransit_times, fully_visible=False)
-            self.observable_mid_transit_times = [t for t, o in zip(midtransit_times, transit_observability) if o]
+            transit_observability = self.check_observability(midtransit_times)
+            self.observable_targets_all_times = [t for t, o in zip(midtransit_times, transit_observability) if o[0]]
+            self.observable_targets_some_times = [t for t, o in zip(midtransit_times, transit_observability) if o[1]]
             
-    def has_transits(self) -> bool:
+    def has_transits(self, fully_visible: bool = True) -> bool:
         """Does this target have any transits in the specified observation time."""
-        return len(self.observable_mid_transit_times) > 0
+        if fully_visible:
+            return len(self.observable_targets_all_times) > 0
+        else:
+            return len(self.observable_targets_some_times) > 0
     
-    def check_observability(self, mid_times: List[Time], fully_visible: bool = True) -> List[bool]:
+    def check_observability(self, mid_times: List[Time]) -> Tuple[List[bool], List[bool]]:
         """Check if the transit is visible.
 
         Args:
@@ -150,7 +155,8 @@ class Target():
                 to True meaning all should be visible.
 
         Returns:
-            List[bool]: List of booleans, one for each transit time.
+            Tuple[List[bool], List[bool]]: a List of booleans, one for each transit time where transit is always visible and one list for
+                transits where transit is visible at least at some point.
         """
         time_c = TimeConstraint(min=self.observation_time,
                                 max=self.observation_end_time)
@@ -159,36 +165,36 @@ class Target():
         all_transit_times = [self._transit_times(t) for t in mid_times if self.observation_time <= t <= self.observation_end_time]
         
         visibility: List[bool] = []
-        if fully_visible:
-            fn = all
-        else:
-            fn = any
-        
         for _, times in all_transit_times:
-            visibility.append(
-                fn([is_event_observable([time_c, *self.observatory.constraints], self.observatory.observer, self.target, t)
+            vis = [is_event_observable([time_c, *self.observatory.constraints], self.observatory.observer, self.target, t)
                     for t in times
-                    ])
+                    ]
+            visibility.append(
+                (all(vis), any(vis))
             )
         return visibility
     
-    def get_transit_details(self) -> list:
+    def get_transit_details(self, fully_visible: bool = True) -> list:
         """return all the timing details for the first visible transit, if any."""
-        if not self.observable_mid_transit_times:
+        obs = []
+        if fully_visible:
+            obs = self.observable_targets_all_times
+        else:
+            obs = self.observable_targets_some_times
+        if not obs:
             return []
-        first_visible_transit = self.observable_mid_transit_times[0]
+        first_visible_transit = obs[0]
         return self._transit_times(first_visible_transit)
     
     def _transit_times(self, t: Time) -> Tuple[Tuple[Time, Time, Time, Time, Time], Tuple[Time, Time, Time, Time, Time]]:
         """For some mid-transit time, get full set of transit times as a tuple along with a tuple containing those times 
         adjusted for the barycentric offset."""
-        d: u.Quantity = 0.1  # random duration of 6 mins
+        d: u.Quantity 
         if self.duration is None or np.isnan(self.duration):
-            d = 0.5 / 60.0  # 1/2 minute
+            d = 0.5 * u.minute
         else:
             d = self.duration / 2.0  # since offset if 1/2 the duration from the mid-point...
-        d *= u.hour
-        
+       
         tt = (
             t - d - self.observatory.exo_hours_before,
             t - d,
@@ -317,7 +323,7 @@ class Target():
         """Representation of the object."""
         s = f"{self.name} {self.star_name} ({self.ra_j2000} {self.dec_j2000}) - "
         s += f"[{self.epoch}, {self.period}, {self.duration}] @ {self.observation_time} for {self.observation_duration} : "
-        s += f"{self.observable_mid_transit_times}"
+        s += f"{self.observable_targets_all_times}"
         return s
 
     def __eq__(self, other: Any):
