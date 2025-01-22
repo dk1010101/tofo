@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+# cSpell:ignore foo
 import wx
 
 class LoadingDialog(wx.Dialog):

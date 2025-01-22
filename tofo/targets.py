@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore astropy AAVSO
-import copy
-
+import logging
 from typing import List, Tuple, Any
 
 import pytz
@@ -33,6 +32,10 @@ class Target():
                  duration: u.Quantity | None = None,
                  eccentricity: float = 0.0,
                  argument_of_periapsis: u.Quantity = 0.0 * u.deg,
+                 var_type: str = "",
+                 minmag: str = "",
+                 maxmag: str = "",
+                 auid: str = "",
                  observation_time: Time | None = None,
                  observation_duration: u.Quantity = None,
                  is_exoplanet: bool = False
@@ -51,6 +54,7 @@ class Target():
             observation_time (Time | None, optional): Start time of the observation. Defaults to None.
             observation_duration (u.Quantity, optional): Duration of the possible observation run as a proper astropy quantity. Defaults to None.
         """
+        self.log = logging.getLogger()
         self.observatory = observatory
         self._name: str = ""
         self._star_name: str = ""
@@ -71,6 +75,10 @@ class Target():
         self.observable_targets_some_times: list = []
         self.eccentricity = eccentricity
         self.argument_of_periapsis: u.Quantity = argument_of_periapsis
+        self.var_type: str = var_type
+        self.minmag: str = minmag
+        self.maxmag: str = maxmag
+        self.auid: str = auid
         
         # assignments
         self.ra_j2000 = ra_j2000
@@ -244,6 +252,18 @@ class Target():
             return self._dec_j2000.strip()
         else:
             return self._dec_j2000
+    
+    @property
+    def ra_deg(self) -> float:
+        if not self.c:
+            raise ValueError("Both RA and DEC are needed before RA in degrees can be returned. Strange, I know.")
+        return self.c.ra.deg
+    
+    @property
+    def dec_deg(self) -> float:
+        if not self.c:
+            raise ValueError("Both RA and DEC are needed before DEC in degrees can be returned. Strange, I know.")
+        return self.c.dec.deg
     
     @ra_j2000.setter
     def ra_j2000(self, ra: str | float) -> None:

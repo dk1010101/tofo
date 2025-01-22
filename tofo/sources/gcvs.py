@@ -1,6 +1,5 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore gcvs astropy isot
-import logging
 from typing import Dict
 
 import numpy as np
@@ -28,7 +27,6 @@ FROM "B/gcvs/gcvs_cat"
     
     def __init__(self, observatory: Observatory, cache_life_days: float | None = None):
         super().__init__(observatory, cache_life_days)
-        self.log = logging.getLogger()
         self.tap = Tap(url="https://TAPVizieR.cds.unistra.fr/TAPVizieR/tap")
         
         self.exoplanets: Dict[str, Target] = {}

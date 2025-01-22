@@ -1,6 +1,5 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock isot
-
 import itertools
 
 from io import StringIO

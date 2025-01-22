@@ -30,8 +30,8 @@ def test_create_no_cld(obs):  # pylint:disable=redefined-outer-name
 
 def test_load(obs):  # pylint:disable=redefined-outer-name
     archive = VSX(obs, cache_life_days=10)
-    assert len(archive.exoplanets_data) == 0
-    assert archive.exoplanets == {}
+    assert len(archive.target_data) == 0
+    assert archive.targets == {}
 
     
 def test_query_target(obs):  # pylint:disable=redefined-outer-name
@@ -45,7 +45,7 @@ def test_query_target(obs):  # pylint:disable=redefined-outer-name
     assert t.period == 4.641878 * u.day
     assert t.duration == 3.62 * u.hour
     
-    assert len(archive.exoplanets_data) == 1
+    assert len(archive.target_data) == 1
     
     a2 = VSX(obs, cache_life_days=10)
     t2 = a2.query_target("HAT-P-42")

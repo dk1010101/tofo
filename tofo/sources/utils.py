@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore isot
+# cSpell:ignore isot auid
 import numpy as np
 import astropy.units as u
 from astropy.coordinates import Angle
@@ -27,9 +27,11 @@ def fix_str_types(tab: Table) ->  None:
 def create_target(observatory: Observatory, 
                   name: str, 
                   ra_deg: str, dec_deg: str, 
-                  epoch: str, period: str, duration: str,
+                  epoch: str,
+                  period: str, duration: str,
                   epoch_format: str = 'jd',
-                  epoch_scale: str = 'tcb') -> Target:
+                  epoch_scale: str = 'tcb',
+                  var_type: str = '', minmag: str = '', maxmag: str = '', auid: str = '') -> Target:
     """Create the target object from string data representations.
 
     Args:
@@ -48,6 +50,10 @@ def create_target(observatory: Observatory,
             We support International Atomic Time (tai), Barycentric Coordinate Time (tcb), 
             Geocentric Coordinate Time (tcg), Barycentric Dynamical Time (tdb), Terrestrial Time (tt), 
             Universal Time (ut1), Coordinated Universal Time (utc) and Local Time Scale (local).
+        var_type (str): Type of the variability, if any
+        minmag (str): Minimum magnitude. This could include non-numerical information.
+        maxmag (str): Maximum magnitude. This could include non-numerical information.
+        auid (str): AUID for this object
 
     Returns:
         Target: New Target object
@@ -75,4 +81,8 @@ def create_target(observatory: Observatory,
                     epoch=e,
                     period=p,
                     duration=d,
+                    var_type=var_type,
+                    minmag=minmag,
+                    maxmag=maxmag,
+                    auid=auid,
                     is_exoplanet=True)

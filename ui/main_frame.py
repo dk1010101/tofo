@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm
+import logging
 import csv
 import datetime
 from datetime import datetime
@@ -32,7 +33,8 @@ class MainFrame(wx.Frame):
     """The main UI frame."""
     
     def __init__(self, *args, **kwds):
-        """Create the UI."""
+        # create the ui
+        self.log = logging.getLogger()
         self.objectdb: ObjectDB        
         margin_size = 8
         
@@ -417,7 +419,8 @@ class MainFrame(wx.Frame):
             if result == wx.ID_NO:
                 return
         ex = ExoClockTargets(self.observatory)
-        self.targets = ex.get_all_transits(self.start_time, self.end_time, True)
+        with wx.BusyCursor():
+            self.targets = ex.get_all_transits(self.start_time, self.end_time, True)
         self.vis_refresh_targets()
 
     def on_menu_exit_app(self, event):  # pylint:disable=unused-argument

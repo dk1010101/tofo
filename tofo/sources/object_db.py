@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock gcvs
 from tofo.observatory import Observatory
 from tofo.targets import Target

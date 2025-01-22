@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore isot
-
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from datetime import datetime
@@ -20,6 +20,7 @@ class Source(ABC):
     def __init__(self, 
                  observatory: Observatory, 
                  cache_life_days: float | None = None):
+        self.log = logging.getLogger()
         self.observatory: Observatory = observatory
         self.ages_table: Table
         self.age_days: u.Quantity

@@ -4,7 +4,7 @@
 import math
 import copy 
 
-import requests
+import logging
 import numpy as np
 import pandas as pd
 
@@ -35,10 +35,10 @@ from tofo.sources.object_db import ObjectDB
 class TargetDialog(wx.Dialog):
     """Dialog for showing all targets of opportunity based on some central object of interest."""
     
-    grid_col_names = ['Name', 'AUID', 'OID', 'Const', 'RA deg', 'DEC deg', 'RA DEC', 'Var Type', 'Min Mag', 'Max Mag', 'Period', 'Epoch', 'Duration', 'Spec Type', 'Category', 'Event ISO', 'Event JD']
+    grid_col_names = ['Name', 'AUID', 'RA deg', 'DEC deg', 'RA DEC', 'Var Type', 'Min Mag', 'Max Mag', 'Period', 'Epoch', 'Duration', 'Event ISO', 'Event JD']
     
     def __init__(self, parent, title="", win_size=(800,800)):
-        """Create the UI"""
+        self.log = logging.getLogger()
         self.loading_dalog: LoadingDialog
         self.observatory: Observatory
         self.objectdb: ObjectDB
@@ -113,13 +113,6 @@ class TargetDialog(wx.Dialog):
             wx.MessageBox(f'Saved data to {fname}.png and {fname}.txt', 'Save OK', wx.OK | wx.ICON_INFORMATION)
         except BaseException:  # pylint:disable=broad-exception-caught  # since we really do not care
             wx.MessageBox(f'Saved to {fname}.png and {fname}.txt failed!', 'Save Failed', wx.OK | wx.ICON_ERROR)
-        
-    def _get_eph(self, epoch: float, period: float, start: Time, end: Time) -> list:
-        """Get all events that fall between start and end times."""
-        minn = int(np.ceil((start.jd - epoch) / period))
-        maxn = int(np.ceil((end.jd - epoch) / period))
-        r = [Time((epoch + n * period), format='jd') for n in range(minn, maxn)]
-        return r
 
     def _get_all_fov(self) -> pd.DataFrame:
         """Get all targets of opportunity that are held in the field of view."""
@@ -154,44 +147,22 @@ class TargetDialog(wx.Dialog):
             'NAXIS2': self.observatory.sensor_size_px[1]
         }
         wcs = WCS(wcs_input_dict)
-        
-        url= 'https://www.aavso.org/vsx/index.php'
-        query = {
-            'view': 'api.list',
-            'ra': target_ra,
-            'dec': target_dec,
-            'radius': radius,
-            'tomag': limiting_mag,
-            'format': 'json'
-        }
-        
-        try:
-            response = requests.get(url, params=query, timeout=30)
-        except requests.exceptions.ReadTimeout:
-            wx.MessageBox("Timeout while trying to get data from AAVSO.", "Oops!", wx.OK | wx.ICON_STOP)
-            df = pd.DataFrame([], columns=['name', 'auid', 'oid', 'constellation', 'ra_deg', 'dec_deg', 
-                                           'radec', 'var_type', 'min_mag', 'max_mag', 
-                                           'period', 'epoch', 'eclipse_duration', 'spectral_type', 
-                                           'event_iso', 'event_jd'])
-            return df, wcs
-        
-        js = response.json()
-        if 'VSXObjects' not in js:
-            return []
-        stars = js['VSXObjects']['VSXObject']
-        
         rows = []
-        for s in stars:
-            
-            _, base_row = self.objectdb.vsx.add_vsx_js_object(s, ret_row=True)
+        target_list = self.objectdb.vsx.query_radius(target_ra, target_dec, radius, limiting_mag)
+        for t in target_list:
             if sky_region:
-                c = SkyCoord(ra=float(base_row[4]) * u.degree, dec=float(base_row[5]) * u.degree)
+                c = SkyCoord(ra=t.ra_deg * u.degree, dec=t.dec_deg * u.degree)
                 if not sky_region.contains(c, wcs):
-                    print(f"skipping {base_row[0]} since it is not in the sky region")
+                    self.log.info(f"skipping %s since it is not in the sky region" % (t.name,))
                     continue
-
-            if not np.isnan(base_row[11]) and not np.isnan(base_row[10]):
-                eph = self._get_eph(base_row[11], base_row[10], self.target.observation_time, self.target.observation_end_time)
+            base_row = [t.name, 
+                        t.auid,
+                        t.ra_deg, t.dec_deg, t.c.to_string("hmsdms"),
+                        t.var_type,
+                        t.minmag, t.maxmag,
+                        t.period, t.epoch, t.duration]
+            if t.epoch is not None and t.period is not None:
+                eph = self._get_eph(t.epoch, t.period, self.target.observation_time, self.target.observation_end_time)
                 if eph:
                     for e in eph:
                         row = copy.deepcopy(base_row)
@@ -199,14 +170,14 @@ class TargetDialog(wx.Dialog):
                         row.append(e.jd)
                         rows.append(row)
                 else:
-                    print(f"skipping {base_row[0]} since there are no events for this object. epoch={base_row[11]} period={base_row[10]}")
+                    print(f"skipping {base_row[0]} since there are no events for this object. epoch={t.epoch} period={t.period}")
             else:
                 row = copy.deepcopy(base_row)
                 row.append('')
                 row.append(0.0)
-        df = pd.DataFrame(rows, columns=['name', 'auid', 'oid', 'constellation', 'ra_deg', 'dec_deg', 
+        df = pd.DataFrame(rows, columns=['name', 'auid', 'ra_deg', 'dec_deg', 
                                          'radec', 'var_type', 'min_mag', 'max_mag', 
-                                         'period', 'epoch', 'eclipse_duration', 'spectral_type', 'category',
+                                         'period', 'epoch', 'eclipse_duration',
                                          'event_iso', 'event_jd'])
         return df, wcs
 
@@ -279,3 +250,11 @@ class TargetDialog(wx.Dialog):
         self.loading_dalog.set_message("Loading sky image...")
         self._show_tofo(wcs)
         self.loading_dalog = None
+
+    def _get_eph(self, epoch: Time, period: u.Quantity, start: Time, end: Time) -> list:
+        """Get all events that fall between start and end times."""
+        p = period.to(u.day).value
+        minn = int(np.ceil((start.jd - epoch.jd) / p))
+        maxn = int(np.ceil((end.jd - epoch.jd) / p))
+        r = [Time((epoch.jd + (n * p)), format='jd') for n in range(minn, maxn)]
+        return r
