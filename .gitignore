@@ -178,3 +178,5 @@ cython_debug/
 *.perf
 *.pickle
 *.hdf5
+*.bkp
+*.sqlite
