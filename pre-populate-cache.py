@@ -28,7 +28,7 @@ if __name__=="__main__":
     
     # get all exoclock targets in the northern hemisphere
     ecd: Table = exoclock.exoplanets_data
-    min_dec = 90 * u.deg - observatory.location.lat
+    min_dec = -(90 * u.deg - observatory.location.lat)
     
     print(f"Filtering exoclock obects for dec >= {min_dec}")
     visible_targets = ecd[Angle(ecd['dec_j2000'], unit=(u.deg)) >= min_dec]

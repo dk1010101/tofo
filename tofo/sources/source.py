@@ -29,7 +29,7 @@ class Source(ABC):
         if cache_life_days is None:
             src = observatory.sources.get(self.name, None)
             if src is None:
-                raise ValueError(f"Could not instantiate source object with {self.name=} as the observatory did not have the source settings for it.")
+                raise ValueError(f"Could not instantiate source object with {self.name} as the observatory did not have the source settings for it.")
             age = observatory.sources[self.name].cache_life_days
             if age.value < 0.0:
                 age = 100_000.0 * u.day # "never" or rather "almost 274 years" :D

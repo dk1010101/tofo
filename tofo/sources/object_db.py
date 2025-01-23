@@ -1,11 +1,15 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock gcvs
+
+from typing import List, Tuple
+
 from tofo.observatory import Observatory
 from tofo.targets import Target
 from tofo.sources.aavso import VSX
 from tofo.sources.gcvs import GCVS
 from tofo.sources.nasa_exo import NasaExoArchive
 from tofo.sources.exoclock import ExoClock
+from tofo.sources.exo_score import ExoScore, TargetScore
 
 
 class ObjectDB():
@@ -17,6 +21,7 @@ class ObjectDB():
         self.gcvs = GCVS(observatory)
         self.nasa_exo = NasaExoArchive(observatory)
         self.exoclock = ExoClock(observatory)
+        self.exo_score = ExoScore(observatory, vsx=self.vsx)
         
     def find_object(self, name: str) -> Target | None:
         """Find the general object using local databases.
@@ -44,7 +49,46 @@ class ObjectDB():
         t = self.gcvs.query_target(name)
         if t is not None:
             return t
-        t = self.exoclock.query_target(name)
+        t = self.vsx.query_target(name)
         if t is not None:
             return t
         return None
+
+    def query_radius(self,
+                     ra: float, dec: float, 
+                     radius: float, limiting_mag: float) -> List[Target]:
+        """_summary_
+
+        Args:
+            ra (float): _description_
+            dec (float): _description_
+            radius (float): _description_
+            limiting_mag (float): _description_
+
+        Returns:
+            List[Target]: _description_
+        """
+        return self.vsx.query_radius(ra, dec, radius, limiting_mag)
+    
+    def get_exoplanet_scores(self, targets: List[Target]) -> List[TargetScore | None]:
+        """_summary_
+
+        Args:
+            targets (List[Target]): _description_
+
+        Returns:
+            List[TargetScore | None]: _description_
+        """
+        return self.exo_score.get_scores(targets)
+    
+    def get_exoplanet_score(self, target: Target) -> TargetScore | None:
+        """_summary_
+
+        Args:
+            targets (Target): _description_
+
+        Returns:
+            TargetScore | None: _description_
+        """
+        return self.exo_score.get_score(target)
+    

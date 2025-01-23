@@ -10,10 +10,6 @@ import requests
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
-from astropy.time import Time
-from astropy.wcs import WCS
-
-from regions import RectangleSkyRegion
 
 from tofo.targets import Target
 from tofo.observatory import Observatory
@@ -23,7 +19,7 @@ from tofo.sources.utils import create_target, fix_str_types
 
 
 class RadiusTarget(NamedTuple):
-    # key for the radius search
+    """Simple specification of the radius search parameters."""
     ra: float
     dec: float
     radius: float
@@ -120,7 +116,12 @@ class VSX(Source):
             self.r_targets[rt].append(t)
     
     def query_target(self, name: str) -> Target | None:
-        return self._query_radius_cache(name)
+        """Query target.
+        
+        This strange delegated implementation is needed because we are caching the call
+        and since the method is abstract pylint complains that is was not implemented
+        even though it is (once `__init__` runs)."""
+        return self.query_target_cache(name)
                 
     def _query_target_nocache(self, name: str) -> Target | None:
         """Get a populated Target object from a name, if the catalog has it and if not try to load it from VSX.
@@ -158,7 +159,7 @@ class VSX(Source):
             return None
         js = response.json()
         if 'VSXObject' in js and js['VSXObject']:
-            t, _ = self._add_vsx_js_object(name, js['VSXObject'])
+            t, _ = self._add_vsx_js_object(js['VSXObject'])
             return t
         else:
             return None

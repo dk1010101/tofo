@@ -147,29 +147,33 @@ class MainFrame(wx.Frame):
         # target grid
         self.grid_targets: wx.grid.Grid = wx.grid.Grid(self.panel_main, wx.ID_ANY)
         self.grid_targets.SetMinSize((700, 250))
-        self.grid_targets.CreateGrid(0, 11)
+        self.grid_targets.CreateGrid(0, 13)
         self.grid_targets.SetColLabelValue(0, "Name")
         self.grid_targets.SetColLabelValue(1, "UTC Obs Start")
         self.grid_targets.SetColLabelValue(2, "UTC Obs End")
-        self.grid_targets.SetColLabelValue(3, "RA")
-        self.grid_targets.SetColLabelValue(4, "DEC")
-        self.grid_targets.SetColLabelValue(5, "All Vis")
+        self.grid_targets.SetColLabelValue(3, "Prio")
+        self.grid_targets.SetColLabelValue(4, "Score")
+        self.grid_targets.SetColLabelValue(5, "Vis")
         self.grid_targets.SetColLabelValue(6, "Before Ingress")
         self.grid_targets.SetColLabelValue(7, "T Start")
         self.grid_targets.SetColLabelValue(8, "T Mid")
         self.grid_targets.SetColLabelValue(9, "T End")
         self.grid_targets.SetColLabelValue(10, "After Egress")
+        self.grid_targets.SetColLabelValue(11, "RA")
+        self.grid_targets.SetColLabelValue(12, "DEC")
         self.grid_targets.SetColSize(0, 22*5)
         self.grid_targets.SetColSize(1, 21*5)
         self.grid_targets.SetColSize(2, 21*5)
-        self.grid_targets.SetColSize(3, 19*5)
-        self.grid_targets.SetColSize(4, 19*5)
-        self.grid_targets.SetColSize(5, 10*5)
+        self.grid_targets.SetColSize(3, 9*5)
+        self.grid_targets.SetColSize(4, 9*5)
+        self.grid_targets.SetColSize(5, 5*5)
         self.grid_targets.SetColSize(6, 21*5)
         self.grid_targets.SetColSize(7, 21*5)
         self.grid_targets.SetColSize(8, 21*5)
         self.grid_targets.SetColSize(9, 21*5)
         self.grid_targets.SetColSize(10, 21*5)
+        self.grid_targets.SetColSize(11, 19*5)
+        self.grid_targets.SetColSize(12, 19*5)
         sizer_main.Add(self.grid_targets, 5, wx.EXPAND|wx.LEFT|wx.RIGHT, margin_size)
 
         # target grid manipulation buttons
@@ -307,12 +311,11 @@ class MainFrame(wx.Frame):
             col = wx.LIGHT_GREY
         for i in range(self.grid_targets.GetNumberCols()):
             self.grid_targets.SetCellBackgroundColour(row_idx, i, col)
-
         self.grid_targets.SetCellValue(row_idx, 0, obj.name)
         self.grid_targets.SetCellValue(row_idx, 1, obj.observation_time.iso[:-7])
         self.grid_targets.SetCellValue(row_idx, 2, end_time.iso[:-7])
-        self.grid_targets.SetCellValue(row_idx, 3, obj.ra_j2000)
-        self.grid_targets.SetCellValue(row_idx, 4, obj.dec_j2000)
+        self.grid_targets.SetCellValue(row_idx, 11, obj.ra_j2000)
+        self.grid_targets.SetCellValue(row_idx, 12, obj.dec_j2000)
         self.grid_targets.SetCellValue(row_idx, 5, 'T' if obj.observable_targets_all_times else 'F')
         if obj.observable_targets_all_times:
             _, td = obj.get_transit_details(True)
@@ -327,7 +330,18 @@ class MainFrame(wx.Frame):
             self.grid_targets.SetCellValue(row_idx, 8, '')
             self.grid_targets.SetCellValue(row_idx, 9, '')
             self.grid_targets.SetCellValue(row_idx, 10, '')
-
+        if obj.is_exoplanet:
+            score = self.objectdb.get_exoplanet_score(obj)
+            if score:
+                self.grid_targets.SetCellValue(row_idx, 3, score.priority)
+                self.grid_targets.SetCellValue(row_idx, 4, f"{score.score:0.3f}")
+            else:
+                self.grid_targets.SetCellValue(row_idx, 3, "")
+                self.grid_targets.SetCellValue(row_idx, 4, "")
+        else:
+            self.grid_targets.SetCellValue(row_idx, 3, "")
+            self.grid_targets.SetCellValue(row_idx, 4, "")
+                
     def vis_refresh_datetimes(self) -> None:
         """Update the datetime widgets."""
         st = self.start_time.jd
@@ -486,6 +500,9 @@ class MainFrame(wx.Frame):
                 d = self.targets[r].observation_duration
                 with wx.BusyCursor():
                     new_target = self.objectdb.find_object(value)
+                    if new_target is None:
+                        wx.MessageBox("Target not found. Please try again.", "Erm...", wx.OK | wx.ICON_WARNING)
+                        return
                 new_target.observation_time = start_time
                 new_target.observation_duration = d
                 if not new_target:
