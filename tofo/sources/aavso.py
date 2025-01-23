@@ -171,11 +171,11 @@ class VSX(Source):
             else:
                 return np.nan
         # MaxMag, MinMag, Period, Epoch and EclipseDuration
-        row[8] = row[8].replace(":", "").replace("*", "")
-        row[9] = row[9].replace(":", "").replace("*", "")
-        row[10] = row[10].replace(":", "").replace("*", "")
-        row[11] = row[11].replace(":", "").replace("*", "")
-        row[12] = row[12].replace(":", "").replace("*", "")
+        row[8] = row[8].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
+        row[9] = row[9].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
+        row[10] = row[10].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
+        row[11] = row[11].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
+        row[12] = row[12].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
         # conv Period, Epoch and EclipseDuration to floats
         row[10] = conv_float(row[10]) if row[10] != 'null' else np.nan
         row[11] = conv_float(row[11]) if row[11] != 'null' else np.nan
@@ -202,9 +202,8 @@ class VSX(Source):
                 js.get('SpectralType', ''),
                 js.get('Category', '')
             ]
-        print(new_row)
+        
         self._cleanup_vsx_row(new_row)
-        print(new_row)
         self.target_data.add_row(new_row)
         fix_str_types(self.target_data)  # expensive but ...
         self.target_data.write(self.cache_file, path=self.name+'/'+self.path_single_target, append=True, overwrite=True)
@@ -268,7 +267,15 @@ class VSX(Source):
         js = response.json()
         if 'VSXObjects' not in js:
             return []
-        stars = js['VSXObjects']['VSXObject']
+        
+        if isinstance(js['VSXObjects'], list):
+            print(f"{rt} - l - {js=}")
+            return []
+        
+        stars = js['VSXObjects'].get('VSXObject', {})
+        if not stars:
+            print(f"{rt} - d - {js=}")
+            return []
         
         self.r_targets[rt] = []
         found_t: List[Target] = []

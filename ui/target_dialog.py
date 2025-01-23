@@ -170,7 +170,7 @@ class TargetDialog(wx.Dialog):
                         row.append(e.jd)
                         rows.append(row)
                 else:
-                    print(f"skipping {base_row[0]} since there are no events for this object. epoch={t.epoch} period={t.period}")
+                    self.log.info(f"skipping {base_row[0]} since there are no events for this object. epoch={t.epoch} period={t.period}")
             else:
                 row = copy.deepcopy(base_row)
                 row.append('')
