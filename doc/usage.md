@@ -57,7 +57,9 @@ Once the targets are loaded they will be shown in the main window:
 
 ![alt text](/images/doc_20.png "Main window with four exoplanets loaded")
 
-The Targets area will show target details (1) including name, priority and score as well as transit timings. It the target was manually entered and it is not visible it will be showed grayed out. Visible targets will also be shown in the "Target Visibility" area (2). The will always look like coloured arcs denoting the path they will take through the sky. The direction can be inferred from the observation that the sky rotates around the Polaris (more or less) and east to west. 
+The Targets area will show target details (1) including name, priority and score as well as transit timings. Priority is the ExoClock observation priority while score is tool's own observation priority score betwen 0 (not very interesting) and 1 (super interesting). See [exoplanet score](exo_score.md) for more information. 
+
+It the target was manually entered and it is not visible it will be showed grayed out. Visible targets will also be shown in the "Target Visibility" area (2). The will always look like coloured arcs denoting the path they will take through the sky. The direction can be inferred from the observation that the sky rotates around the Polaris (more or less) and east to west. 
 
 Note that targets are not labelled. This is by design as usually (especially for large telescopes) there will be many targets visible at any time so the number of targets can easily be 20+ and legend will provide very little information. The easiest way to determine what arc is what target is by clicking on it:
 

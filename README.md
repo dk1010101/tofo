@@ -34,7 +34,9 @@ Once you have a list of targets you cen see if they are visible or not by lookin
 
 To see targets of opportunity for a specific target double click on the row number and a new window will open. It may take some time for it to come to life as it will be downloading sky image and AAVSO variable stars in the background. Once loaded this screen is not really interactive but you can save the image and the data by clicking on the `save` button.
 
-For more detailed instructions have a look at the [usage example](doc/usage.md)
+For more detailed instructions have a look at the [usage example](doc/usage.md).
+
+For information about the `observatory.yaml` have a look at the [specification](doc/observatory.md) which also includes information about the horizon file.
 
 Enjoy!
 

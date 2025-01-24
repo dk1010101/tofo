@@ -28,6 +28,15 @@ observations:
   min_mag: 19.0
   exo_hours_before: 1
   exo_hours_after: 1
-exoclock:
-  cache_file: exoclock.pickle
-  cache_life_days: 1
+sources:
+  cache_file: tofo.hdf5
+  exoclock:
+    cache_life_days: 30
+  nasa_exo_archive:
+    cache_life_days: 90
+  aavso_vsx:
+    cache_life_days: -1
+  gcvs:
+    cache_life_days: 180
+  exo_score:
+    cache_life_days: -1
