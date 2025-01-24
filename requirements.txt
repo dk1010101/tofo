@@ -4,7 +4,7 @@ numpy
 scipy
 pandas
 
-matplotlib
+matplotlib<3.10.0  # since astropy visualisation atm uses AnchoredEllipse which was removed in 3.10.0
 palettable
 
 astropy
