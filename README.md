@@ -1,3 +1,5 @@
+![alt text](/images/doc_00.png "Logo")
+
 # tofo - Target of Opportunity Tool (aka Toot!)
 
 Simple target of opportunity tool used to plan exoplanet and photometry sessions.

@@ -30,6 +30,8 @@ which will be interpreted with the tool as follows:
 
 ![alt text](/images/doc_80.png "Horizon in Alt-Az as polar plot")
 
+In this plot the visible area is the area _inside_ the polygon. Anything outside is below the local horizon. Note that in the above diagram the coordinates *do not* follow the compass positions. They plot what the coordinates would look like if the observer was lying down looking up at the sky while their head is pointing north and their legs are pointing south.
+
 It is clear from the above images that the person with the above horizon file needs to move somewhere more suitable to observing as they cannot see much to the west and they really have problems on the east too.
 
-Creating the horizon file is reasonably straight forward. If you have an mobile phone just open the [GyroCom web page](https://rkinnett.github.io/gyrocam/?magdec=0), go out to your observatory and simply record the alt-az using the app. You can then send yourself the CSV file. You will have to edit the generated file but that is simple and you can use notepad (or excel) for it - just remove everything apart from the "Heading" and "Az" columns then save the file under some reasonable name, `horizon.csv` is usually good. Make sure this name is then referenced in the `observatory.yaml` file.
+Creating the horizon file is reasonably straight forward. If you have an mobile phone just open the [GyroCam web page](https://rkinnett.github.io/gyrocam/?magdec=0), go out to your observatory and simply record the alt-az using the app. You can then send yourself the CSV file. You will have to edit the generated file but that is simple and you can use notepad (or excel) for it - just remove everything apart from the "Heading" and "Az" columns then save the file under some reasonable name, `horizon.csv` is usually good. Make sure this name is then referenced in the `observatory.yaml` file.
