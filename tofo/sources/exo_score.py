@@ -135,10 +135,7 @@ class ExoScore(Source):
                               t['min_d_rank'], 1.0/10.0)
         t.sort('score')
         t.write(self.cache_file, path=self.name, append=True, overwrite=True)
-        self.scores_data = [
-            [row[0], row[1], row[7]]
-            for row in t
-        ]
+        self.scores_data = t
         self.update_age()
     
     def needs_updating(self) -> bool | None:

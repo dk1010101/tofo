@@ -172,11 +172,12 @@ class VSX(Source):
             else:
                 return np.nan
         # MaxMag, MinMag, Period, Epoch and EclipseDuration
-        row[8] = row[8].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
-        row[9] = row[9].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
-        row[10] = row[10].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
-        row[11] = row[11].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
-        row[12] = row[12].replace(":", "").replace("*", "").replace(">", "").replace("<", "")
+        rem_chars = ':*><() UBVRIcj/CN'
+        row[8] = row[8].translate({ord(i): None for i in rem_chars})
+        row[9] = row[9].translate({ord(i): None for i in rem_chars})
+        row[10] = row[10].translate({ord(i): None for i in rem_chars})
+        row[11] = row[11].translate({ord(i): None for i in rem_chars})
+        row[12] = row[12].translate({ord(i): None for i in rem_chars})
         # conv Period, Epoch and EclipseDuration to floats
         row[10] = conv_float(row[10]) if row[10] != 'null' else np.nan
         row[11] = conv_float(row[11]) if row[11] != 'null' else np.nan
