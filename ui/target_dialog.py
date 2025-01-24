@@ -35,7 +35,19 @@ from tofo.sources.object_db import ObjectDB
 class TargetDialog(wx.Dialog):
     """Dialog for showing all targets of opportunity based on some central object of interest."""
     
-    grid_col_names = ['Name', 'AUID', 'RA deg', 'DEC deg', 'RA DEC', 'Var Type', 'Min Mag', 'Max Mag', 'Period', 'Epoch', 'Duration', 'Event ISO', 'Event JD']
+    grid_col_spec = [('Name', 35*5), 
+                     ('AUID', 16*5), 
+                     ('RA deg', 10*5), 
+                     ('DEC deg', 10*5), 
+                     ('RA DEC', 31*5), 
+                     ('Var Type', 13*5), 
+                     ('Min Mag', 12*5), 
+                     ('Max Mag', 12*5), 
+                     ('Period', 12*5), 
+                     ('Epoch', 16*5), 
+                     ('Duration', 12*5), 
+                     ('Event ISO', 24*5), 
+                     ('Event JD', 19*5)]
     
     def __init__(self, parent, title="", win_size=(800,800)):
         self.log = logging.getLogger()
@@ -44,6 +56,7 @@ class TargetDialog(wx.Dialog):
         self.objectdb: ObjectDB
         self.ax = None
         self.target: Target
+        self.wcs: WCS = None
         self.df: pd.DataFrame
         
         # UI
@@ -61,9 +74,10 @@ class TargetDialog(wx.Dialog):
         
         # targets grid
         self.grid_tofo: wx.grid.Grid = wx.grid.Grid(panel_main, wx.ID_ANY)
-        self.grid_tofo.CreateGrid(5, len(TargetDialog.grid_col_names))
-        for idx, name in enumerate(TargetDialog.grid_col_names):
-            self.grid_tofo.SetColLabelValue(idx, name)
+        self.grid_tofo.CreateGrid(5, len(TargetDialog.grid_col_spec))
+        for idx, col in enumerate(TargetDialog.grid_col_spec):
+            self.grid_tofo.SetColLabelValue(idx, col[0])
+            self.grid_tofo.SetColSize(idx, col[1])
         self.sizer_main_non_dialog.Add(self.grid_tofo, 1, wx.EXPAND, 0) 
         
         # dialog buttons
@@ -146,13 +160,13 @@ class TargetDialog(wx.Dialog):
             'CROTA2': self.observatory.crota2,
             'NAXIS2': self.observatory.sensor_size_px[1]
         }
-        wcs = WCS(wcs_input_dict)
+        self.wcs = WCS(wcs_input_dict)
         rows = []
         target_list = self.objectdb.vsx.query_radius(target_ra, target_dec, radius, limiting_mag)
         for t in target_list:
             if sky_region:
                 c = SkyCoord(ra=t.ra_deg * u.degree, dec=t.dec_deg * u.degree)
-                if not sky_region.contains(c, wcs):
+                if not sky_region.contains(c, self.wcs):
                     self.log.info(f"skipping %s since it is not in the sky region" % (t.name,))
                     continue
             base_row = [t.name, 
@@ -179,7 +193,7 @@ class TargetDialog(wx.Dialog):
                                          'radec', 'var_type', 'min_mag', 'max_mag', 
                                          'period', 'epoch', 'eclipse_duration',
                                          'event_iso', 'event_jd'])
-        return df, wcs
+        return df, self.wcs
 
     def _show_tofo(self, wcs: WCS):
         """Get a sky image for the field of view (120% of it) and then plot targets of opportunity on it."""
@@ -193,9 +207,14 @@ class TargetDialog(wx.Dialog):
         hdu = fits.open(url)[0]
 
         wcs_i = WCS(hdu.header)  # pylint:disable=no-member
-                
+        
         # self.ax = self.figure.add_subplot(1, 1, 1, projection=wcs_i)
-        self.ax = self.figure.add_subplot(1, 1, 1)
+        if wcs_i is not None:
+            self.ax = self.figure.add_subplot(1, 1, 1, projection=wcs_i)
+            self.ax.set(xlabel="RA", ylabel="Dec")
+        else:
+            self.ax = self.figure.add_subplot(1, 1, 1)
+            self.ax.set(xlabel="x pixel", ylabel="y pixel")
         
         # Plot the image
         self.ax.imshow(hdu.data)  # pylint:disable=no-member
@@ -244,8 +263,22 @@ class TargetDialog(wx.Dialog):
         for ridx, row in enumerate(arr):
             self.grid_tofo.SelectRow(ridx, True)
             self.grid_tofo.ClearSelection()
-            for cidx, val in enumerate(row):
-                self.grid_tofo.SetCellValue(ridx, cidx, str(val))
+            # for cidx, val in enumerate(row):
+            #    self.grid_tofo.SetCellValue(ridx, cidx, str(val))
+            self.grid_tofo.SetCellValue(ridx, 0, str(row[0]))  # name
+            self.grid_tofo.SetCellValue(ridx, 1, str(row[1]))  # AUID is any
+            self.grid_tofo.SetCellValue(ridx, 2, f"{float(row[2]):.2f}")  # RA in degrees
+            self.grid_tofo.SetCellValue(ridx, 3, f"{float(row[3]):.2f}")  # DEC is degrees
+            self.grid_tofo.SetCellValue(ridx, 4, str(row[4]))  # RA DEC as string
+            self.grid_tofo.SetCellValue(ridx, 5, str(row[5]))  # Var Type as string
+            self.grid_tofo.SetCellValue(ridx, 6, str(row[6]))  # MinMag as string
+            self.grid_tofo.SetCellValue(ridx, 7, str(row[7]))  # MaxMag as string
+            self.grid_tofo.SetCellValue(ridx, 8, row[8].round(2).to_string())  # Period as string
+            self.grid_tofo.SetCellValue(ridx, 9, f"{float(row[9].jd):.4f}")  # Epoch as string
+            self.grid_tofo.SetCellValue(ridx, 10, row[10].round(2).to_string())  # Duration as string
+            self.grid_tofo.SetCellValue(ridx, 11, str(row[11][:-7]))  # Event ISO minus millisecond part as string
+            self.grid_tofo.SetCellValue(ridx, 12, f"{float(row[12]):.4f}")  # Event JD as string
+            
         
         self.loading_dalog.set_message("Loading sky image...")
         self._show_tofo(wcs)
