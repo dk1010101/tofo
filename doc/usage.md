@@ -19,13 +19,15 @@ Once the data files have been loaded the splash screen will be replaced with the
 
 ![alt text](/images/doc_10.png "Empty main tool window")
 
-The main window has a number of areas and controls that are used to tailor what the tool will show. The top area is the "Observation Date/Time" which contains both local and UTC date/times for observation start (marked with the "1" label in the above) and end ("2" above). The local time is based on the time zone specified in the `observatory.yaml` file and the time zone is shown on the above diagram marked with the "3" label. Changing the local time will automatically update UTC time and vice versa. The end time must always be greater than the start time. The "Apply to All" button is only used when the targets in the area marked with the "5" label have different observation times and the start/end times specified in the "Observation Date/Time" should be used to override those.
+The main window has a number of areas and controls that are used to tailor what the tool will show. The top area is the "Observation Date/Time" which contains both local and UTC date/times for observation start (marked with the "1" label in the above) and end ("2" above). The local time is based on the time zone specified in the `observatory.yaml` file and the time zone is shown on the above diagram in line with the Local TIme row. Note that the local time row lables are grayed out - this is because the tool works in UTC and local times are here just for convenience. Changing the local time will automatically update UTC time and vice versa. The end time must always be greater than the start time. The "Apply to All" button (3) is only used when the targets in the area marked with the "4" label have different observation times and the start/end times specified in the "Observation Date/Time" should be used to override those.
 
-Internally the tool uses UTC times for all operations and it is useful to always think in UTC. Time zones are evil as it is and let's not go in to the whole summer time mess. Ergo, UTC (aka Zulu time, if you are military minded).
+Internally the tool uses UTC times for all operations and it is useful to always think in UTC. Time zones are [evil](https://www.zainrizvi.io/blog/falsehoods-programmers-believe-about-time-zones/) as it is and let's not go in to the whole summer time mess. Ergo, UTC (aka Zulu time, if you are militarily minded). Of course, we could all just switch to [consensus time](https://www.xkcd.com/2594/) but until that happens UTC is the way to go. 
 
-The "Targets" are is where all target data will be presented. This area can be populated automatically (see below) or the user can enter targets manually using the "Add Row" ("6") and "Del Row" ("7") buttons. If a row is added manually, clicking on the "Name" cell and entering the target name will fetch the exoplanet or variable star details and will automatically populate other fields. "UTC Obs Start" and "UTC Obs End" can also be modified. Once targets have been loaded/entered they may (!) appear in the sky visibility plot in the area below (9). 
+The "Targets" are is where all target data will be presented. This area can be populated automatically (see below) or the user can enter targets manually using the "Add Row" (5) and "Del Row" (6) buttons. If a row is added manually, clicking on the "Name" cell and entering the target name will fetch the exoplanet or variable star details and will automatically populate other fields. "UTC Obs Start" and "UTC Obs End" can also be modified. Once targets have been loaded/entered they may (!) appear in the sky visibility plots in the area below (7 and 8). 
 
-"Target Visibility" area (9) shows the whole sky, as if the observer was lying on the ground, looking up with their head pointing north and their feet pointing south. The plot initially shows the horizon as a coloured polygon. Anything inside the polygon is visible and anything outside is not. Finally, the status bar (10) is used to show which target is selected in the visibility plot.
+"Target Visibility" area is subdivided in to two plots. The first plot (7), looking from the left, shows the whole sky, as if the observer was lying on the ground, looking up with their head pointing north and their feet pointing south. The plot initially shows the horizon as a polygon. Anything inside the polygon is visible and anything outside is not. The second plot (8) shows the same thing but as an Altitude/Azimuth plot. Here it is easier to see the horizon (coloured area) and the sky (everything above all the way up to 90 degrees). At the bottom of the horizontal axes an additional axes is there showing North, East, South and West points and, since this plot wraps around, initially North is both the first and the last point. Underneath plot (8) is a slider that allows changing of the Altitude-Azimuth mid-point. This can be used to rotate the viewpoint and see the horizon and the sky as if looking from a different direction. See the target section below for an example.
+
+Finally, the status bar (10) is used to show which target is selected in either of the visibility plots (7 or 8).
 
 ## Loading Targets
 
@@ -55,17 +57,29 @@ The pull-down menu also has the obligatory "Exit" option (3).
 
 Once the targets are loaded they will be shown in the main window:
 
-![alt text](/images/doc_20.png "Main window with four exoplanets loaded")
+![alt text](/images/doc_20.png "Main window with five exoplanets loaded")
 
 The Targets area will show target details (1) including name, priority and score as well as transit timings. Priority is the ExoClock observation priority while score is tool's own observation priority score betwen 0 (not very interesting) and 1 (super interesting). See [exoplanet score](exo_score.md) for more information. 
 
-It the target was manually entered and it is not visible it will be showed grayed out. Visible targets will also be shown in the "Target Visibility" area (2). The will always look like coloured arcs denoting the path they will take through the sky. The direction can be inferred from the observation that the sky rotates around the Polaris (more or less) and east to west. 
+It the target was manually entered and it is not visible it will be showed grayed out. Visible targets will also be shown in the "Target Visibility" area (2). Targets will always be represented by coloured arcs denoting the path they will take through the sky. The direction can be inferred from the observation that the sky rotates around the Polaris (more or less) and east to west. 
+
+If the Azimuth mid-point slider is moved, the horizon plot on the right will rotate the viewpoint. Moving the slider to "E" (East) in the above will result in the following view:
+
+![alt text](/images/doc_22.png "Main window with five exoplanets loaded with the horizon view rotated to the East")
+
+It is easy to see that now the view in (1) has changed and that all transits are now visible as uninterrupted arcs.
 
 Note that targets are not labelled. This is by design as usually (especially for large telescopes) there will be many targets visible at any time so the number of targets can easily be 20+ and legend will provide very little information. The easiest way to determine what arc is what target is by clicking on it:
 
-![alt text](/images/doc_30.png "Main window with exoplanets with a target arc being clicked on")
+![alt text](/images/doc_30.png "Main window with exoplanets with a target arc being clicked on, on the polar plot")
 
 Clicking on the target (1) will show its name on the status bar (2).
+
+It is possible to click on either plot to select the target:
+
+![alt text](/images/doc_32.png "Main window with exoplanets with a target arc being clicked on, on the alt-az plot")
+
+Note that clicking on the targets in either plot also selects the target in the "Targets" grid above.
 
 ## Targets of Opportunity
 
@@ -77,7 +91,7 @@ A popup window will appear (2) which will inform you of the progress of loading 
 
 ![alt text](/images/doc_50.png "Target of opportunity window")
 
-This windows will show the sky view with targets of interested plotted as points (1). It will also show lots of interesting data about the targets (2). If the target of opportunity has a number events during the transit time, it will be listed multiple times.
+This windows will show the sky view with targets of interested plotted as points (1). It will also show lots of interesting data about the targets (2). If the target of opportunity has a number events during the transit time, it will be listed multiple times. This example shows an evening when a number of interesting events are visible and, looking at the "Event ISO" column we can see that by observing between 22:57 and 01:07 four events can be recorded - three W Ursae Majoris eclipsing variables and one β Persei-type (Algol) eclipsing system. Looking at the main screen again, at the target we can see that the transit + pre/post times for TOI-1181b range from 17:49 to 23:54 so if the additional events are of interest, the transit session can be extended to after 01:07.
 
 The information presented on this window can be saved using the "Save" button (3). Clicking on this button will create two files, one with the sky image and one with all the information held in the table.
 
