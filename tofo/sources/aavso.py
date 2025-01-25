@@ -271,12 +271,10 @@ class VSX(Source):
             return []
         
         if isinstance(js['VSXObjects'], list):
-            print(f"{rt} - l - {js=}")
             return []
         
         stars = js['VSXObjects'].get('VSXObject', {})
         if not stars:
-            print(f"{rt} - d - {js=}")
             return []
         
         self.r_targets[rt] = []
