@@ -1,12 +1,11 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm
+# cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm SWNESWNES
 import logging
 import csv
 import datetime
 from datetime import datetime
-from typing import List
+from typing import List, Any
 
-import pytz
 import numpy as np
 
 import astropy.units as u
@@ -17,6 +16,8 @@ from astroplan.plots import plot_sky
 
 from palettable.tableau import ColorBlind_10
 
+from matplotlib.axes import Axes
+
 import wx
 import wx.adv
 import wx.grid
@@ -26,8 +27,10 @@ from ui.loading_dialog import LoadingDialog
 from tofo.observatory import Observatory
 from tofo.targets import Target
 from tofo.exoclock_targets import ExoClockTargets
-from tofo.ui_mpl_canvas import MatplotlibCanvas
 from tofo.sources.object_db import ObjectDB
+from tofo.ui_altaz_plot import plot_altaz_sky
+from tofo.ui_list_slider import ListSlider
+from tofo.ui_mpl_canvas import MatplotlibCanvas
 
 class MainFrame(wx.Frame):
     """The main UI frame."""
@@ -42,14 +45,19 @@ class MainFrame(wx.Frame):
         del kwds['observatory']
         
         self.targets: List[Target] = []
-        self.ax = None
+        self.ax_polar: Axes = None
+        self.ax_altaz: Axes = None
+        self.ax_altaz_2: Axes = None
+        self.colours: Any = ColorBlind_10.mpl_colors
+        self.altaz_plot_midpoint: int = 180
         
         self.start_time: Time
         self.end_time: Time
         
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((900, 900))
+        self.SetMinSize((1200, 1000))
+        self.SetSize((1200, 1000))
         self.SetTitle("Target of opportunity tool")
 
         # TODO: popup splash since loading dbs can take a while
@@ -198,12 +206,30 @@ class MainFrame(wx.Frame):
         label_tv_title.SetFont(ft_section)
         sizer_tv.Add(label_tv_title, 0, wx.ALIGN_BOTTOM|wx.LEFT|wx.RIGHT|wx.TOP, margin_size)
                 
-        # visibility plot
-        self.canvas = MatplotlibCanvas(self.panel_main, wx.ID_ANY)
-        self.canvas.SetMinSize((500, 400))
-        self.figure = self.canvas.figure
-        sizer_main.Add(self.canvas, 10, wx.EXPAND|wx.ALL, margin_size)
+        # visibility plots
+        sizer_grid_canvas = wx.GridSizer(1, 2, 0, 0)  # 1 row, 2 cols
+        sizer_main.Add(sizer_grid_canvas, 10, wx.EXPAND|wx.ALL, margin_size)
+        self.canvas_polar = MatplotlibCanvas(self.panel_main, wx.ID_ANY)
+        self.canvas_polar.SetMinSize((500, 400))
+        self.figure_polar = self.canvas_polar.figure
+        sizer_grid_canvas.Add(self.canvas_polar, 0, wx.EXPAND|wx.ALL, margin_size)
         
+        self.canvas_altaz = MatplotlibCanvas(self.panel_main, wx.ID_ANY)
+        self.canvas_altaz.SetMinSize((500, 400))
+        self.figure_altaz = self.canvas_altaz.figure
+        sizer_grid_canvas.Add(self.canvas_altaz, 0, wx.EXPAND|wx.ALL, margin_size)
+        
+        sizer_grid_vis_controls = wx.GridSizer(1, 6, 0, 0)  # 1 row, 2 cols
+        sizer_main.Add(sizer_grid_vis_controls, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, margin_size)
+        sizer_grid_vis_controls.Add((10,10), 0, wx.EXPAND, 0)
+        sizer_grid_vis_controls.Add((10,10), 0, wx.EXPAND, 0)
+        sizer_grid_vis_controls.Add((10,10), 0, wx.EXPAND, 0)
+        label_ls_title = wx.StaticText(self.panel_main, wx.ID_ANY, "Azimuth Mid Point  ")
+        sizer_grid_vis_controls.Add(label_ls_title, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, 0)
+        self.sl_altaz_mid = ListSlider(self.panel_main, wx.ID_ANY, ['N','E','S','W'])
+        self.sl_altaz_mid.SetValue('S')
+        sizer_grid_vis_controls.Add(self.sl_altaz_mid,0, wx.EXPAND, 0)       
+                
         # and we are done
         self.panel_main.SetSizer(sizer_main)
         
@@ -227,8 +253,10 @@ class MainFrame(wx.Frame):
         self.dp_end.Bind(wx.adv.EVT_DATE_CHANGED, self.on_tdp_end_change)
         self.tp_end.Bind(wx.adv.EVT_TIME_CHANGED, self.on_tdp_end_change)
         self.bt_dt_apply_all.Bind(wx.EVT_BUTTON, self.on_bt_dt_apply_all)
+        self.sl_altaz_mid.Bind(wx.EVT_SLIDER, self.on_sl_altaz_mid_change)
         # canvas events
-        self.canvas.mpl_connect( 'pick_event', self.on_canvas_pick)
+        self.canvas_polar.mpl_connect('pick_event', self.on_canvas_pick)
+        self.canvas_altaz.mpl_connect('pick_event', self.on_canvas_pick)
         self._last_pick_mouseevent = None  # store info, as we will act only once per pick event
         # self.canvas.mpl_connect( 'motion_notify_event', self.on_canvas_mouse_move)
         
@@ -250,52 +278,140 @@ class MainFrame(wx.Frame):
         self.end_time = self.observatory.observer.twilight_morning_civil(obs_time) - self.observatory.timezone_offset
         self.vis_refresh_datetimes()
    
-    def plot_horizon(self):
-        """Draw the horizon from the horizon file."""
-        if not self.ax:
-            self.ax = self.figure.add_subplot(1, 1, 1, projection='polar')
+    def plot_polar_horizon(self):
+        """Plot the horizon and targets using the polar layout"""
+        if not self.ax_polar:
+            self.ax_polar = self.figure_polar.add_subplot(1, 1, 1, projection='polar')
             # self.ax.set_prop_cycle('color', ColorBlind_10.mpl_colors)
         h = [(x[0]*np.pi/180.0, 90-x[1]) for x in self.observatory.horizon]
         theta = [x[0] for x in h]
         r = [x[1] for x in h]
-        self.ax.set_theta_zero_location('N')
-        self.ax.set_yticks(range(90, 0, -10))   
-        self.ax.set_rlim(0, 90)
-        self.ax.plot(theta, r)
-        self.ax.set_rmax(90)
-        self.ax.grid(True)
+        self.ax_polar.set_theta_zero_location('N')
+        self.ax_polar.set_yticks(range(90, 0, -10))   
+        self.ax_polar.set_rlim(0, 90)
+        self.ax_polar.plot(theta, r)
+        self.ax_polar.set_rmax(90)
+        self.ax_polar.grid(True)
+   
+    def plot_altaz_horizon(self):
+        """Plot the horizon and targets on an alt-az type plot."""
+        self.figure_altaz.clf()
+        self.ax_altaz = self.figure_altaz.add_subplot(1, 1, 1)
+        
+        # setup axis
+        self.ax_altaz.set_xlabel(r"Azimuth (degrees)")
+        self.ax_altaz.set_ylabel(r"Altitude (degrees)")
+        # second x axis
+        self._setup_second_altaz_x_axis()
+        self.ax_altaz.set_zorder(self.ax_altaz_2.get_zorder() + 1)  # we need to change z-order or picker events won't work
+        self.ax_altaz.grid(True, which='both')
+        self.ax_altaz.set_ylim(0, 90)
+        self.ax_altaz.set_yticks(np.arange(0,91,10))
+        horizon_x = [e[0]-360 for e in self.observatory.horizon[:-1]]+[e[0] for e in self.observatory.horizon[:-1]]+[e[0]+360 for e in self.observatory.horizon]
+        horizon_y = [e[1] for e in self.observatory.horizon[:-1]]+[e[1] for e in self.observatory.horizon[:-1]]+[e[1] for e in self.observatory.horizon]
+        
+        offset = self.altaz_plot_midpoint-180
+        self.ax_altaz.set_xlim(offset, offset+360)
+        self.ax_altaz.set_xticks(np.arange(offset,offset+360+1,45))
+        self.ax_altaz.plot(horizon_x, horizon_y)
+        self.ax_altaz.fill_between(horizon_x, horizon_y, 0)
 
-    def vis_refresh_targets(self):
-        """Refresh all targets."""
-        self.vis_update_target_grid_size()
-        if self.ax:
-            self.ax.cla()
-        self.plot_horizon()
-        
-        colours = ColorBlind_10.mpl_colors
-        
-        # have_targets: bool = False
+    def plot_full_altaz_horizon(self):
+        self.plot_altaz_horizon()
         for ridx, target in enumerate(self.targets):
             self.vis_update_target_grid_row(ridx)
-            if self.ax and target.observable_targets_all_times:
+            if target.observable_targets_all_times:
                 tds = target.get_transit_details()
                 if tds:
                     obs_start = tds[0][0]
                     duration = (tds[0][-1] - tds[0][0]).to(u.hour)
-                    plot_col = colours[ridx % len(colours)]
+                    plot_col = self.colours[ridx % len(self.colours)]
+                    plot_altaz_sky(target.target, 
+                                   self.observatory.observer, 
+                                   obs_start + np.linspace(0, duration.value, 20)*u.hour, 
+                                   ax=self.ax_altaz,
+                                   style_kwargs={
+                                       's': 8,
+                                       'color': plot_col,
+                                       'picker': True
+                                   },
+                                   midpoint=self.altaz_plot_midpoint)
+        self.canvas_altaz.draw()
+
+    def _setup_second_altaz_x_axis(self,):
+        """Create a second x axis for the alt-az plot to show where compass NEWS positions are."""
+        def tick_function(x: Any):
+            ln = list("NESWNESWNESW")
+            return [ln[int(np.floor((e - 180)/90 + 6))] for e in x]
+        
+        self.figure_altaz.subplots_adjust(bottom=0.27)
+        if self.ax_altaz_2:
+            self.ax_altaz_2.cla()
+        ax2 = self.ax_altaz.twiny()
+        second_ticks_locations = np.arange(self.altaz_plot_midpoint-180, self.altaz_plot_midpoint-180+360+1, 90)
+        # Move twinned axis ticks and label from top to bottom
+        ax2.xaxis.set_ticks_position("bottom")
+        ax2.xaxis.set_label_position("bottom")
+        
+        # Offset the twin axis below the host
+        ax2.spines["bottom"].set_position(("axes", -0.24))
+        
+        # Turn on the frame for the twin axis, but then hide all 
+        # but the bottom spine
+        ax2.set_frame_on(True)
+        ax2.patch.set_visible(False)
+        
+        for sp in ax2.spines.values():
+            sp.set_visible(False)
+        ax2.spines["bottom"].set_visible(True)
+        ax2.set_xlim(np.min(second_ticks_locations), np.max(second_ticks_locations))
+        ax2.set_xticks(second_ticks_locations, tick_function(second_ticks_locations))
+        
+        self.ax_altaz_2 = ax2
+
+    def vis_refresh_targets(self):
+        """Refresh all targets."""
+        self.vis_update_target_grid_size()
+        if self.ax_polar:
+            self.ax_polar.cla()
+        self.plot_polar_horizon()
+        if self.figure_altaz:
+            self.figure_altaz.clf()
+        self.plot_altaz_horizon()
+        
+        # have_targets: bool = False
+        for ridx, target in enumerate(self.targets):
+            self.vis_update_target_grid_row(ridx)
+            if target.observable_targets_all_times:
+                tds = target.get_transit_details()
+                if tds:
+                    obs_start = tds[0][0]
+                    duration = (tds[0][-1] - tds[0][0]).to(u.hour)
+                    plot_col = self.colours[ridx % len(self.colours)]
                     plot_sky(target.target, 
                              self.observatory.observer, 
                              obs_start + np.linspace(0, duration.value, 20)*u.hour, 
-                             ax=self.ax,
+                             ax=self.ax_polar,
                              style_kwargs={
                                 's': 8,
                                 'color': plot_col,
                                 'picker': True
                             })
+                    plot_altaz_sky(target.target, 
+                                   self.observatory.observer, 
+                                   obs_start + np.linspace(0, duration.value, 20)*u.hour, 
+                                   ax=self.ax_altaz,
+                                   style_kwargs={
+                                      's': 8,
+                                      'color': plot_col,
+                                      'picker': True
+                                   },
+                                   midpoint=self.altaz_plot_midpoint)
                     # have_targets = True
         # if self.ax and have_targets:
         #    self.ax.legend(loc='lower left', bbox_to_anchor=(-0.4, 0.2))
-        self.canvas.draw()
+        self.canvas_polar.draw()
+        self.canvas_altaz.draw()       
         
     def vis_update_target_grid_row(self, row_idx: int) -> None:
         """Update a row on the target grid with the data in the target list."""
@@ -572,3 +688,18 @@ class MainFrame(wx.Frame):
             return
         self._last_pick_mouseevent = label
         self.sb.SetStatusText(f"Selected Object: {label}")
+        for row_pos in range(self.grid_targets.GetNumberRows()):
+            if self.grid_targets.GetCellValue(row_pos, 0) == label:
+                self.grid_targets.SelectRow(row_pos)
+
+    def on_sl_altaz_mid_change(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
+        """Update the alt-az horizon plot if midpoint changes"""
+        trans = {
+            'N': 0,
+            'E': 90,
+            'S': 180,
+            'W': 270,
+        }
+        v = self.sl_altaz_mid.GetValue()
+        self.altaz_plot_midpoint = trans[v]
+        self.plot_full_altaz_horizon()
