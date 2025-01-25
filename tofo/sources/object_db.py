@@ -17,11 +17,26 @@ class ObjectDB():
     def __init__(self, observatory: Observatory):
         self.observatory = observatory
         
-        self.vsx = VSX(observatory)
-        self.gcvs = GCVS(observatory)
-        self.nasa_exo = NasaExoArchive(observatory)
-        self.exoclock = ExoClock(observatory)
-        self.exo_score = ExoScore(observatory, vsx=self.vsx)
+        if VSX.name in observatory.sources.keys():
+            self.vsx = VSX(observatory)
+        else:
+            raise ValueError("the observatory file must have the ExoClock section.")
+        if GCVS.name in observatory.sources.keys():
+            self.gcvs = GCVS(observatory)
+        else:
+            self.gcvs = None
+        if NasaExoArchive.name in observatory.sources.keys():
+            self.nasa_exo = NasaExoArchive(observatory)
+        else:
+            self.nasa_exo = None
+        if ExoClock.name in observatory.sources.keys():
+            self.exoclock = ExoClock(observatory)
+        else:
+            raise ValueError("the observatory file must have the ExoClock section.")
+        if ExoScore.name in observatory.sources.keys():
+            self.exo_score = ExoScore(observatory, vsx=self.vsx)
+        else:
+            self.exo_score = None
         
     def find_object(self, name: str) -> Target | None:
         """Find the general object using local databases.
@@ -40,18 +55,22 @@ class ObjectDB():
         Returns:
             Target | None: representation of the object or None if the object was not found.
         """
-        t = self.exoclock.query_target(name)
-        if t is not None:
-            return t
-        t = self.nasa_exo.query_target(name)
-        if t is not None:
-            return t
-        t = self.gcvs.query_target(name)
-        if t is not None:
-            return t
-        t = self.vsx.query_target(name)
-        if t is not None:
-            return t
+        if self.exoclock:
+            t = self.exoclock.query_target(name)
+            if t is not None:
+                return t
+        if self.nasa_exo:
+            t = self.nasa_exo.query_target(name)
+            if t is not None:
+                return t
+        if self.gcvs:
+            t = self.gcvs.query_target(name)
+            if t is not None:
+                return t
+        if self.vsx:
+            t = self.vsx.query_target(name)
+            if t is not None:
+                return t
         return None
 
     def query_radius(self,
@@ -79,7 +98,10 @@ class ObjectDB():
         Returns:
             List[TargetScore | None]: _description_
         """
-        return self.exo_score.get_scores(targets)
+        if self.exo_score:
+            return self.exo_score.get_scores(targets)
+        else:
+            return None
     
     def get_exoplanet_score(self, target: Target) -> TargetScore | None:
         """_summary_
@@ -90,5 +112,7 @@ class ObjectDB():
         Returns:
             TargetScore | None: _description_
         """
-        return self.exo_score.get_score(target)
-    
+        if self.exo_score:
+            return self.exo_score.get_score(target)
+        else:
+            return None
