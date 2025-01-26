@@ -14,9 +14,6 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astropy.wcs import WCS
-from astropy.io import fits
-
-from pyvo import registry
 
 from matplotlib.patches import Rectangle, Circle
 
@@ -49,7 +46,7 @@ class TargetDialog(wx.Dialog):
                      ('Event ISO', 24*5), 
                      ('Event JD', 19*5)]
     
-    def __init__(self, parent, title="", win_size=(800,800)):
+    def __init__(self, parent, title="", win_size=(800,600)):
         self.log = logging.getLogger()
         self.loading_dalog: LoadingDialog
         self.observatory: Observatory
@@ -62,15 +59,46 @@ class TargetDialog(wx.Dialog):
         # UI
         super(TargetDialog, self).__init__(parent, title=title, size=win_size)
         panel_main = wx.Panel(self)
+        
+        bold_font: wx.Font = panel_main.GetFont()
+        bold_font.SetWeight(wx.FONTWEIGHT_BOLD)
+        
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         self.sizer_main_non_dialog = wx.BoxSizer(wx.VERTICAL)
+        sizer_main.Add(self.sizer_main_non_dialog, 20, wx.EXPAND, 0)
         
+        # TOP - starfield plot and target details grid
+        self.sz_top_grid: wx.GridSizer = wx.GridSizer(1, 2, 10, 0)
+        self.sizer_main_non_dialog.Add(self.sz_top_grid, 2, wx.EXPAND, 0)
         # starfield plot
         self.canvas = MatplotlibCanvas(panel_main, wx.ID_ANY)
         self.canvas.SetMinSize((500, 500))
         self.figure = self.canvas.figure
-        self.sizer_main_non_dialog.Add(self.canvas, 0, wx.ALL | wx.EXPAND, 0)
-        sizer_main.Add(self.sizer_main_non_dialog, 1, wx.EXPAND, 0)
+        self.sz_top_grid.Add(self.canvas, 0, wx.ALL | wx.EXPAND, 0)
+        # target details grid
+        self.target_grid: wx.grid.Grid = wx.grid.Grid(panel_main, wx.ID_ANY)
+        self.target_grid.CreateGrid(12, 2)
+        self.target_grid.SetRowLabelSize(0)
+        self.target_grid.SetColLabelValue(0, "Parameter")
+        self.target_grid.SetColLabelValue(1, "Value")
+        self.target_grid.SetColSize(0, 30*5)
+        self.target_grid.SetColSize(1, 25*5)
+        self.target_grid.SetCellValue(0, 0, "Name")
+        self.target_grid.SetCellValue(1, 0, "Start time before Ingress")
+        self.target_grid.SetCellValue(2, 0, "Transit Start")
+        self.target_grid.SetCellValue(3, 0, "Mid-Transit")
+        self.target_grid.SetCellValue(4, 0, "Transit End")
+        self.target_grid.SetCellValue(5, 0, "End time after Egress")
+        self.target_grid.SetCellValue(6, 0, "Mag V")
+        self.target_grid.SetCellValue(7, 0, "Mag R")
+        self.target_grid.SetCellValue(8, 0, "Mag Gaia G")
+        self.target_grid.SetCellValue(9, 0, "Epoch")
+        self.target_grid.SetCellValue(10, 0, "Period")
+        self.target_grid.SetCellValue(11, 0, "Duration")
+
+        for i in range(12):
+            self.target_grid.SetCellFont(i, 0, bold_font)
+        self.sz_top_grid.Add(self.target_grid, 0, wx.ALL | wx.ALIGN_CENTRE_HORIZONTAL|wx.ALIGN_CENTRE_VERTICAL, 0)
         
         # targets grid
         self.grid_tofo: wx.grid.Grid = wx.grid.Grid(panel_main, wx.ID_ANY)
@@ -115,19 +143,9 @@ class TargetDialog(wx.Dialog):
             self.observatory: Observatory = observatory
             self.objectdb: ObjectDB = objectdb
             
+            self.set_target()
             self.get_tofos()
     
-    def on_bt_save(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
-        """Save the image and the data (if any)."""
-        fname = f"{self.target.name}_{self.target.observation_time.datetime.isoformat()}".replace(":", "-")
-        try:
-            self.figure.savefig(fname+".png", dpi=300)
-            with open(fname+'.txt', "w", encoding="utf-8") as f:
-                f.writelines(self.df.to_string(float_format=lambda x: f"{x:.6f}"))
-            wx.MessageBox(f'Saved data to {fname}.png and {fname}.txt', 'Save OK', wx.OK | wx.ICON_INFORMATION)
-        except BaseException:  # pylint:disable=broad-exception-caught  # since we really do not care
-            wx.MessageBox(f'Saved to {fname}.png and {fname}.txt failed!', 'Save Failed', wx.OK | wx.ICON_ERROR)
-
     def _get_all_fov(self) -> pd.DataFrame:
         """Get all targets of opportunity that are held in the field of view."""
         target_ra = self.target.c.ra.deg
@@ -142,7 +160,6 @@ class TargetDialog(wx.Dialog):
         sky_region = RectangleSkyRegion(center = self.target.c,
                                         width = self.observatory.fov[0] * 1.2,
                                         height = self.observatory.fov[1] * 1.2)
-        wcs = None
         wcs_input_dict = {
             'NAXIS' : 2,
             'CTYPE1': 'RA---TAN', 
@@ -167,7 +184,7 @@ class TargetDialog(wx.Dialog):
             if sky_region:
                 c = SkyCoord(ra=t.ra_deg * u.degree, dec=t.dec_deg * u.degree)
                 if not sky_region.contains(c, self.wcs):
-                    self.log.info(f"skipping %s since it is not in the sky region" % (t.name,))
+                    self.log.info("skipping %s since it is not in the sky region", t.name)
                     continue
             base_row = [t.name, 
                         t.auid,
@@ -184,7 +201,7 @@ class TargetDialog(wx.Dialog):
                         row.append(e.jd)
                         rows.append(row)
                 else:
-                    self.log.info(f"skipping {base_row[0]} since there are no events for this object. epoch={t.epoch} period={t.period}")
+                    self.log.info("skipping %s since there are no events for this object. epoch=%s period=%s", base_row[0], t.epoch.iso, t.period.to_string())
             else:
                 row = copy.deepcopy(base_row)
                 row.append('')
@@ -196,19 +213,10 @@ class TargetDialog(wx.Dialog):
         return df, self.wcs
 
     def _show_tofo(self, wcs: WCS):
-        """Get a sky image for the field of view (120% of it) and then plot targets of opportunity on it."""
-        dss_services = registry.search(registry.Servicetype('image'), registry.Waveband('optical'), registry.Freetext("DSS"))
-        im_table = dss_services[0].search(pos=self.target.c, 
-                                          size=[self.observatory.fov[0]*1.2, self.observatory.fov[1]*1.2],
-                                          format='image/fits', intersect='COVERS')
-        url = im_table[0].getdataurl()
-        url = url.replace("pixels=300%2C300", "pixels=2000%2C2000")  # since we don't know a better way
+        """Get a sky image for the field of view (120% of it) and then plot targets of opportunity on it."""    
+        hdu = self.objectdb.get_fits(self.target)
         
-        hdu = fits.open(url)[0]
-
         wcs_i = WCS(hdu.header)  # pylint:disable=no-member
-        
-        # self.ax = self.figure.add_subplot(1, 1, 1, projection=wcs_i)
         if wcs_i is not None:
             self.ax = self.figure.add_subplot(1, 1, 1, projection=wcs_i)
             self.ax.set(xlabel="RA", ylabel="Dec")
@@ -248,6 +256,38 @@ class TargetDialog(wx.Dialog):
         self.ax.add_patch(p)
         self.ax.set_title(f"{self.target.name} - {self.target.observation_time.iso[:10]} - {2460000 + int(jd[0])}")
 
+    def set_target(self) -> None:
+        """Add target values to the top-right grid."""
+        if self.target is None:
+            return
+        td = self.target.get_transit_details()
+        if not td:
+            for i in range(11):
+                self.target_grid.SetCellValue(i, 1, "")
+            return
+        transit = td[1]  # light-time adjusted
+        self.target_grid.SetCellValue(0, 1, self.target.name)
+        for i in range(1, 6):
+            self.target_grid.SetCellValue(i, 1, transit[i-1].iso.split('.')[0])
+
+        if self.target.epoch is not None:
+            self.target_grid.SetCellValue(9, 1, f"{self.target.epoch.jd:.4f}")
+        else:
+            self.target_grid.SetCellValue(9, 1, "")
+        if self.target.period is not None:
+            self.target_grid.SetCellValue(10, 1, self.target.period.to_string())
+        else:
+            self.target_grid.SetCellValue(10, 1, "")
+        if self.target.duration is not None:
+            self.target_grid.SetCellValue(11, 1, self.target.duration.to_string())
+        else:
+            self.target_grid.SetCellValue(11, 1, "")
+            
+        self.target_grid.SetCellValue(6, 1, f"{self.target.mag_v:.3f}")
+        self.target_grid.SetCellValue(7, 1, f"{self.target.mag_r:.3f}")
+        self.target_grid.SetCellValue(8, 1, f"{self.target.mag_g:.3f}")
+        
+    
     def get_tofos(self):
         """Get all targets of opportunity, add them to the grid and plot them on the sky image."""
         self.loading_dalog.set_message("Loading targets...")
@@ -263,8 +303,6 @@ class TargetDialog(wx.Dialog):
         for ridx, row in enumerate(arr):
             self.grid_tofo.SelectRow(ridx, True)
             self.grid_tofo.ClearSelection()
-            # for cidx, val in enumerate(row):
-            #    self.grid_tofo.SetCellValue(ridx, cidx, str(val))
             self.grid_tofo.SetCellValue(ridx, 0, str(row[0]))  # name
             self.grid_tofo.SetCellValue(ridx, 1, str(row[1]))  # AUID is any
             self.grid_tofo.SetCellValue(ridx, 2, f"{float(row[2]):.2f}")  # RA in degrees
@@ -278,7 +316,6 @@ class TargetDialog(wx.Dialog):
             self.grid_tofo.SetCellValue(ridx, 10, row[10].round(2).to_string())  # Duration as string
             self.grid_tofo.SetCellValue(ridx, 11, str(row[11][:-7]))  # Event ISO minus millisecond part as string
             self.grid_tofo.SetCellValue(ridx, 12, f"{float(row[12]):.4f}")  # Event JD as string
-            
         
         self.loading_dalog.set_message("Loading sky image...")
         self._show_tofo(wcs)
@@ -286,8 +323,21 @@ class TargetDialog(wx.Dialog):
 
     def _get_eph(self, epoch: Time, period: u.Quantity, start: Time, end: Time) -> list:
         """Get all events that fall between start and end times."""
+        if np.isnan(period.value):
+            return []
         p = period.to(u.day).value
         minn = int(np.ceil((start.jd - epoch.jd) / p))
         maxn = int(np.ceil((end.jd - epoch.jd) / p))
         r = [Time((epoch.jd + (n * p)), format='jd') for n in range(minn, maxn)]
         return r
+
+    def on_bt_save(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
+        """Save the image and the data (if any)."""
+        fname = f"{self.target.name}_{self.target.observation_time.datetime.isoformat()}".replace(":", "-")
+        try:
+            self.figure.savefig(fname+".png", dpi=300)
+            with open(fname+'.txt', "w", encoding="utf-8") as f:
+                f.writelines(self.df.to_string(float_format=lambda x: f"{x:.6f}"))
+            wx.MessageBox(f'Saved data to {fname}.png and {fname}.txt', 'Save OK', wx.OK | wx.ICON_INFORMATION)
+        except BaseException:  # pylint:disable=broad-exception-caught  # since we really do not care
+            wx.MessageBox(f'Saved to {fname}.png and {fname}.txt failed!', 'Save Failed', wx.OK | wx.ICON_ERROR)

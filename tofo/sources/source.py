@@ -25,7 +25,7 @@ class Source(ABC):
         self.ages_table: Table
         self.age_days: u.Quantity
         
-        self.cache_file = observatory.sources_cache_file_name
+        self.cache_file: Path = observatory.sources_cache_file_name
         if cache_life_days is None:
             src = observatory.sources.get(self.name, None)
             if src is None:
@@ -51,9 +51,8 @@ class Source(ABC):
 
     def needs_updating(self) -> bool:
         """Give the age and date/time, does the cache need updating?"""
-        p = Path(self.cache_file)
-        if p.is_file():
-            self.ages_table = Table.read(self.cache_file, path='ages')
+        if self.cache_file.is_file():
+            self.ages_table = Table.read(self.cache_file.as_posix(), path='ages')
             start_time_iso = self.ages_table[self.ages_table['source']==self.name]['age']
             if start_time_iso.size > 0:
                 start = Time(start_time_iso[:], format="isot")

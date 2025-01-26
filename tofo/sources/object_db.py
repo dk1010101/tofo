@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock gcvs
 
-from typing import List, Tuple
+from typing import List, Any
 
 from tofo.observatory import Observatory
 from tofo.targets import Target
@@ -10,6 +10,7 @@ from tofo.sources.gcvs import GCVS
 from tofo.sources.nasa_exo import NasaExoArchive
 from tofo.sources.exoclock import ExoClock
 from tofo.sources.exo_score import ExoScore, TargetScore
+from tofo.sources.image_cache import ImageCache
 
 
 class ObjectDB():
@@ -37,6 +38,8 @@ class ObjectDB():
             self.exo_score = ExoScore(observatory, vsx=self.vsx)
         else:
             self.exo_score = None
+            
+        self.image_cache = ImageCache(observatory)
         
     def find_object(self, name: str) -> Target | None:
         """Find the general object using local databases.
@@ -114,5 +117,19 @@ class ObjectDB():
         """
         if self.exo_score:
             return self.exo_score.get_score(target)
+        else:
+            return None
+
+    def get_fits(self, target: Target) -> Any:
+        """_summary_
+
+        Args:
+            target (Target): _description_
+
+        Returns:
+            Any: _description_
+        """
+        if self.image_cache:
+            return self.image_cache.get_fits(target)
         else:
             return None

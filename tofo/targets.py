@@ -73,12 +73,16 @@ class Target():
         self.target: FixedTarget = None
         self.observable_targets_all_times: list = []
         self.observable_targets_some_times: list = []
-        self.eccentricity = eccentricity
+        self.eccentricity: float = eccentricity
         self.argument_of_periapsis: u.Quantity = argument_of_periapsis
         self.var_type: str = var_type
         self.minmag: str = minmag
         self.maxmag: str = maxmag
         self.auid: str = auid
+        
+        self.mag_v: float = np.nan
+        self.mag_r: float = np.nan
+        self.mag_g: float = np.nan
         
         # assignments
         self.ra_j2000 = ra_j2000
@@ -182,7 +186,7 @@ class Target():
             )
         return visibility
     
-    def get_transit_details(self, fully_visible: bool = True) -> list:
+    def get_transit_details(self, fully_visible: bool = True) -> Tuple[Tuple[Time, Time, Time, Time, Time], Tuple[Time, Time, Time, Time, Time]]:
         """return all the timing details for the first visible transit, if any."""
         obs = []
         if fully_visible:
@@ -255,12 +259,14 @@ class Target():
     
     @property
     def ra_deg(self) -> float:
+        """RA in degrees"""
         if not self.c:
             raise ValueError("Both RA and DEC are needed before RA in degrees can be returned. Strange, I know.")
         return self.c.ra.deg
     
     @property
     def dec_deg(self) -> float:
+        """DEC in degrees"""
         if not self.c:
             raise ValueError("Both RA and DEC are needed before DEC in degrees can be returned. Strange, I know.")
         return self.c.dec.deg

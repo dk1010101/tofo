@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore AAVSO VSX AUID hmsdms tomag
+# cSpell:ignore AAVSO VSX AUID hmsdms tomag UBVR
 from pathlib import Path
 from functools import lru_cache
 from typing import Dict, List, NamedTuple
@@ -155,7 +155,7 @@ class VSX(Source):
         }
         response = requests.get(VSX.url, params=query, timeout=30)
         if response.status_code != 200:
-            self.log.error("Failed to load data from AAVSO VSX for '%s': %d: %s" % (name, response.status_code, response.reason))  # pylint:disable=consider-using-f-string
+            self.log.error("Failed to load data from AAVSO VSX for '%s': %d: %s", name, response.status_code, response.reason)
             return None
         js = response.json()
         if 'VSXObject' in js and js['VSXObject']:
@@ -264,7 +264,7 @@ class VSX(Source):
         }
         response = requests.get(VSX.url, params=query, timeout=30)
         if response.status_code != 200:
-            self.log.error("Failed to load data from AAVSO VSX for radius search: %s" % (str(rt), ))  # pylint:disable=consider-using-f-string
+            self.log.error("Failed to load data from AAVSO VSX for radius search: %s", str(rt)) 
             return []
         js = response.json()
         if 'VSXObjects' not in js:

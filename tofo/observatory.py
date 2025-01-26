@@ -1,7 +1,8 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore crota exoclock
+# cSpell:ignore crota exoclock tofo
 import csv
 import datetime
+from pathlib import Path
 from typing import Tuple, List, NamedTuple, Any
 
 import numpy as np
@@ -31,6 +32,7 @@ class Observatory:
         This "constructor" also creates horizon and twilight constraint list, if the right data
         is passed in.
         """
+        self.files_root: Path = Path(data.get('files_root', '.'))
         self.location: EarthLocation = EarthLocation.from_geodetic(lon=data['observatory']['lon_deg'] * u.deg, 
                                                                    lat=data['observatory']['lat_deg'] * u.deg, 
                                                                    height=data['observatory']['elevation_m'] * u.m)
@@ -45,6 +47,7 @@ class Observatory:
         self.timezone_offset = tnow.utcoffset().total_seconds() * u.s
         self.focal_length: u.Quantity = data['telescope']['focal_length_mm'] * u.mm
         self.aperture: u.Quantity = data['telescope']['aperture_mm'] * u.mm
+        self.sensor_name: str = data['telescope']['sensor'].get('name', '')
         self.sensor_size_px: Tuple[int, int] = (data['telescope']['sensor']['num_pix_x'], data['telescope']['sensor']['num_pix_y'])
         self.sensor_size: Tuple[u.Quantity, u.Quantity] = (data['telescope']['sensor']['size_x_mm'] *u.mm, data['telescope']['sensor']['size_y_mm'] *u.mm)
         self.fov = (np.arctan(self.sensor_size[0]/self.focal_length).to(u.deg), 
@@ -75,7 +78,8 @@ class Observatory:
         # load horizon
         self.horizon: List[Tuple[float, float]] = []
         if data['observatory'].get('horizon_file', False):
-            with open(data['observatory']['horizon_file'], 'r', encoding="utf-8") as file:
+            hf = data['observatory']['horizon_file']
+            with open(self.files_root.joinpath(hf).as_posix(), 'r', encoding="utf-8") as file:
                 csv_reader = csv.reader(file) # pass the file object to reader() to get the reader object
                 self.horizon = [(float(e[0]), float(e[1])) for e in list(csv_reader)]
         else:
@@ -85,17 +89,22 @@ class Observatory:
 
         self.sources = {}
         sources: dict = data["sources"]
-        self.sources_cache_file_name = sources["cache_file"]
+        self.sources_cache_dir: Path = self.files_root.joinpath("cache")
+        self.sources_cache_file_name: Path = self.sources_cache_dir.joinpath(sources.get("cache_file", "tofo.hdf5"))
+        self.sources_cache_image_dir: Path = self.sources_cache_dir.joinpath(sources.get("cache_image_dir", "images"))
+        self.sources_cache_image_dir.mkdir(parents=True, exist_ok=True)
+        
         for k, v in sources.items():
-            if k=='cache_file':
+            if k in ['cache_file', 'cache_image_dir', 'cache_root']:
                 continue
             self.sources[k] = SourceDefinition(use=v.get("use", True), 
                                                cache_life_days=v.get('cache_life_days', 0.0)*u.day)
 
     def __eq__(self, other: Any):
-        """Equality..."""
+        """Equality for all..."""
         if isinstance(other, Observatory):
             return all([
+                self.files_root == other.files_root,
                 self.location.lat == other.location.lat,
                 self.location.lon == other.location.lon,
                 self.location.height == other.location.height,
@@ -109,6 +118,7 @@ class Observatory:
                 self.observer.relative_humidity == other.observer.relative_humidity,
                 self.focal_length == other.focal_length,
                 self.aperture == other.aperture,
+                self.sensor_name == other.sensor_name,
                 self.sensor_size_px == other.sensor_size_px,
                 self.sensor_size == other.sensor_size,
                 self.fov == other.fov,
@@ -120,7 +130,9 @@ class Observatory:
                 self.exo_hours_before == other.exo_hours_before,
                 self.exo_hours_after == other.exo_hours_after,
                 self.horizon == other.horizon,
+                self.sources_cache_dir == other.sources_cache_dir,
                 self.sources_cache_file_name == other.sources_cache_file_name,
+                self.sources_cache_image_dir == other.sources_cache_image_dir,
                 self.sources == other.sources,
                 len(self.constraints) == len(other.constraints)
                 # we are not checking constraints at the moment (as we don't know how it can be done) so twilight could be different

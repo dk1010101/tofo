@@ -78,11 +78,11 @@ FROM "B/gcvs/gcvs_cat"
                 epoch = ''
             ra = str(row['RAJ2000'])
             if not ra or 'nan' in ra.lower() or "--" in ra:
-                self.log.warning("Target '%s' does not have legal RA: %s. Ignoring the Object." % (row['name'], row['RAJ2000']))  # pylint:disable=consider-using-f-string
+                self.log.warning("Target '%s' does not have legal RA: %s. Ignoring the Object.", row['name'], row['RAJ2000'])  # pylint:disable=consider-using-f-string
                 continue
             dec = str(row['DEJ2000'])
             if not dec or 'nan' in dec.lower() or "--" in dec:
-                self.log.warning("Target '%s' does not have legal DEC: %s. Ignoring the Object." % (row['name'], row['DEJ2000']))  # pylint:disable=consider-using-f-string
+                self.log.warning("Target '%s' does not have legal DEC: %s. Ignoring the Object.", row['name'], row['DEJ2000'])  # pylint:disable=consider-using-f-string
                 continue
                 
             name = (' '.join(row['name'].split())).strip()

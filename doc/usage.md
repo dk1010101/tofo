@@ -81,6 +81,12 @@ It is possible to click on either plot to select the target:
 
 Note that clicking on the targets in either plot also selects the target in the "Targets" grid above.
 
+Main screen allows examination of the paths the transits will take and rough planning of observations. For example, in the above, we can see that `TOI-1181b` will be getting very close to the horizon towards the end of the transit (the path is arcing under the Polaris so it will be moving West to East and thus we can see that it will touch the horizon at the end of the transit). We can also look at the "T Start" and "T End" times for all transits and see that, in theory, we could record both `TOI-1181b` (starting at 17:49 and ending at 23:54) and `KELT-4Ab` (staring at 23:15 and ending at 04:42). We will have to end the first transit half way through post-egress time and start the second a little late. While this is possible it is worth asking additional questions - what is the possible drift and thus can we take time pre-egress and post-egress and also can the observatory really start imaging at 17:49 or what additional targets are there and are they worth taking. Then there is, of course, weather. In the UK, at least, it is highly unusual to be able to observe over the whole night. Or at all.
+
+An additional possible two-target combination will be `XO-7b` and `WASP-104b` but this pair has very few additional targets.
+
+Another useful thing to notice is that, looking at "Target Visibility" plots we can see where meridian flips will be needed and where they would fall in the transit. A flip will be needed whenever the N-S line in the polar plot or when 0 or 180 azimuth lines are crossed. Since each dot on the plots equals 30 mins it is straight forward to see if flips will be needed during transit start/end times since those time are the worst possible times to not be able to record data. If dots are not visible then it will be tricker (but not impossible) to make this estimate.
+
 ## Targets of Opportunity
 
 If you are interested to see what other interesting objects will be visible in the field of view that contains a specific target, double click (1) on the target row number in the Target area.
@@ -91,7 +97,13 @@ A popup window will appear (2) which will inform you of the progress of loading 
 
 ![alt text](/images/doc_50.png "Target of opportunity window")
 
-This windows will show the sky view with targets of interested plotted as points (1). It will also show lots of interesting data about the targets (2). If the target of opportunity has a number events during the transit time, it will be listed multiple times. This example shows an evening when a number of interesting events are visible and, looking at the "Event ISO" column we can see that by observing between 22:57 and 01:07 four events can be recorded - three W Ursae Majoris eclipsing variables and one β Persei-type (Algol) eclipsing system. Looking at the main screen again, at the target we can see that the transit + pre/post times for TOI-1181b range from 17:49 to 23:54 so if the additional events are of interest, the transit session can be extended to after 01:07.
+This windows will show the sky view with targets of interested plotted as points (1). It will also show lots of interesting data about the targets (3) as well as the main target (2). Note that in (3), if a target of opportunity has a number events during the transit time, it will be listed multiple times. 
+
+This example shows an evening when a number of interesting events are visible and, looking at the "Event ISO" column we can see that by observing between 22:57 and 01:07 three events can be recorded - two W Ursae Majoris eclipsing variables and one β Persei-type (Algol) eclipsing system. Looking at the transit details of the main target in (2) we can see that the transit + pre/post times for TOI-1181b range from 17:49 to 23:54 so if the additional events are of interest, the transit session should be extended to after 01:07 so that additional events are covered. 
+
+The dialog also shows that `NSVS 3133546` is outside of the camera FOV but that it has an event that could be captured during the transit and that, thus, if this event is of particular interest, the center of the FOV can be moved to include this event. This will mean that the `ZTF J194855.96+644026.7` will be missed. 
+
+Finally, looking at the main target's magnitude (3) and potential additional target magnitudes (2) we see that, depending on the sensor used, we will have to be careful end working out the exposure times so that we don't saturate the main target while still getting enough from additional targets (mag 10.27 vs eg 14.32) but be careful when comparing magnitudes using different filters, `V` vs `R` vs `r`. As always, astro-imaging is all about compromises.
 
 The information presented on this window can be saved using the "Save" button (3). Clicking on this button will create two files, one with the sky image and one with all the information held in the table.
 

@@ -2,6 +2,7 @@
 observatory.yaml
 horizon.csv
 horizon2.csv
+cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

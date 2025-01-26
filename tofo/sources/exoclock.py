@@ -1,11 +1,12 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore exoclock isot
 import itertools
-
-from io import StringIO
-from typing import Dict, List
 import json
 import urllib
+from io import StringIO
+from typing import Dict, List
+
+import numpy as np
 
 import astropy.units as u
 from astropy.time import Time
@@ -64,7 +65,10 @@ class ExoClock(Source):
                        duration=exo['duration_hours'] * u.hour,
                        eccentricity=exo['eccentricity'],
                        argument_of_periapsis=exo['periastron'] * self._to_u(exo['periastron_units']),
-                       is_exoplanet=True) 
+                       is_exoplanet=True)
+        t.mag_v = exo.get('v_mag', np.nan)
+        t.mag_r = exo.get('r_mag', np.nan)
+        t.mag_g = exo.get('gaia_g_mag', np.nan)
         return t
         
     def query_target(self, name: str) -> Target | None:

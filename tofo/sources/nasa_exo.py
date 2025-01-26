@@ -86,6 +86,10 @@ class NasaExoArchive(Source):
                        argument_of_periapsis=0.0 * u.deg,  # unknown
                        is_exoplanet=True)
             
+            t.mag_v = np.nan
+            t.mag_r = exo.get('sy_rmag', np.nan)
+            t.mag_g = exo.get('sy_gaiamag', np.nan)
+            
             self.exoplanets[exo['hostname']] = t
             if exo['hd_name']:
                 self.exoplanets[exo['hd_name']] = t

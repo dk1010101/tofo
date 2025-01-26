@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm SWNESWNES
+# cSpell:ignore ridx irow rahms decdms mday Exoclock sizer Hmmmmm NESWNESWNESW Prio
 import logging
 import csv
 import datetime
@@ -317,6 +317,7 @@ class MainFrame(wx.Frame):
         self.ax_altaz.fill_between(horizon_x, horizon_y, 0)
 
     def plot_full_altaz_horizon(self):
+        """Plot the asl-az horizon and add all the targets."""
         self.plot_altaz_horizon()
         for ridx, target in enumerate(self.targets):
             self.vis_update_target_grid_row(ridx)
@@ -567,7 +568,7 @@ class MainFrame(wx.Frame):
         self.vis_refresh_datetimes()
         
     def on_tdp_l_end_change(self, event: wx.adv.DateEvent):  # pylint:disable=unused-argument
-        """Get the local date/teim and update."""
+        """Get the local date/time and update."""
         tm1 = self.dp_l_end.GetValue().GetTm()
         tm2 = self.tp_l_end.GetValue().GetTm()
         t = Time(f"{tm1.year}-{tm1.mon+1:02d}-{tm1.mday:02d}T{tm2.hour}:{tm2.min}:{tm2.sec}")  # TODO: there has to be a nicer way!
