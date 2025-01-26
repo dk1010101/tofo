@@ -1,7 +1,9 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore exoclock gcvs
+# cSpell:ignore exoclock gcvs IERS
 
 from typing import List, Any
+
+from astroplan import download_IERS_A
 
 from tofo.observatory import Observatory
 from tofo.targets import Target
@@ -16,6 +18,9 @@ from tofo.sources.image_cache import ImageCache
 class ObjectDB():
     """Collection of all different data sources and mechanisms to query them."""
     def __init__(self, observatory: Observatory):
+        
+        download_IERS_A() ## update IERS BUlletin A held in the cache. Check https://astroplan.readthedocs.io/en/stable/faq/iers.html for more info.
+        
         self.observatory = observatory
         
         if VSX.name in observatory.sources.keys():
