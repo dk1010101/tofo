@@ -29,14 +29,17 @@ observations:
   exo_hours_before: 1
   exo_hours_after: 1
 sources:
-  cache_file: tofo.hdf5
+  cache_file: tofo_palomar.hdf5
+  cache_image_dir: imagecache
   exoclock:
     cache_life_days: 30
-  nasa_exo_archive:
-    cache_life_days: 90
+  #nasa_exo_archive:
+  #  cache_life_days: 90
   aavso_vsx:
     cache_life_days: -1
-  gcvs:
-    cache_life_days: 180
+  #gcvs:
+  #  cache_life_days: 180
   exo_score:
     cache_life_days: -1
+config:
+  files_root: .

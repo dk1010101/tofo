@@ -12,7 +12,7 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.table import Table, Row
 
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.observatory import Observatory
 
 from tofo.sources.source import Source

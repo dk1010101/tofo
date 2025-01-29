@@ -38,7 +38,8 @@ class Target():
                  auid: str = "",
                  observation_time: Time | None = None,
                  observation_duration: u.Quantity = None,
-                 is_exoplanet: bool = False
+                 is_exoplanet: bool = False,
+                 priority: float = 0.5
                  ):
         """Create the Target object.
 
@@ -79,6 +80,7 @@ class Target():
         self.minmag: str = minmag
         self.maxmag: str = maxmag
         self.auid: str = auid
+        self.priority: float = priority
         
         self.mag_v: float = np.nan
         self.mag_r: float = np.nan
@@ -98,13 +100,13 @@ class Target():
         self.observation_duration = observation_duration
         self.observation_time = observation_time
     
-    def to_utc(self, dt: Time) -> Time:
+    def _time_to_utc(self, dt: Time) -> Time:
         """Convert time to UTC time."""
         tz = self.observatory.observer.timezone
         ndt = tz.normalize(tz.localize(dt.to_datetime())).astimezone(pytz.utc)
         return Time(ndt, location=self.observatory.location)
 
-    def to_ltz(self, dt: Time) -> Time:
+    def _time_to_ltz(self, dt: Time) -> Time:
         """Convert time to local time zone time."""
         tzutc = pytz.utc
         ndt = tzutc.localize(dt.to_datetime())
@@ -170,15 +172,12 @@ class Target():
             Tuple[List[bool], List[bool]]: a List of booleans, one for each transit time where transit is always visible and one list for
                 transits where transit is visible at least at some point.
         """
-        time_c = TimeConstraint(min=self.observation_time,
-                                max=self.observation_end_time)
-
         # we need to filter the times as otherwise we will be doing a lot of unnecessary calculations
         all_transit_times = [self._transit_times(t) for t in mid_times if self.observation_time <= t <= self.observation_end_time]
         
         visibility: List[bool] = []
         for _, times in all_transit_times:
-            vis = [is_event_observable([time_c, *self.observatory.constraints], self.observatory.observer, self.target, t)
+            vis = [is_event_observable(self.observatory.constraints, self.observatory.observer, self.target, t)
                     for t in times
                     ]
             visibility.append(
@@ -194,10 +193,24 @@ class Target():
         else:
             obs = self.observable_targets_some_times
         if not obs:
-            return []
+            return ([], [])
         first_visible_transit = obs[0]
         return self._transit_times(first_visible_transit)
     
+    def to_tuple(self) -> tuple|None:
+        """Convert this target in to a tuple, mainly for scheduling."""
+        _, next_transit = self.get_transit_details()
+        if next_transit:
+            return (
+                self.name,
+                self.priority,
+                next_transit[0],  # start inc pre
+                next_transit[4],   # end inc post
+                self.target
+            )
+        else:
+            return None
+        
     def _transit_times(self, t: Time) -> Tuple[Tuple[Time, Time, Time, Time, Time], Tuple[Time, Time, Time, Time, Time]]:
         """For some mid-transit time, get full set of transit times as a tuple along with a tuple containing those times 
         adjusted for the barycentric offset."""

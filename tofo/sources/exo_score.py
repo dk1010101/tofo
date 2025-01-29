@@ -11,7 +11,7 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from astropy.time import Time
 
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.sources.source import Source
 from tofo.sources.aavso import VSX
 from tofo.sources.exoclock import ExoClock
@@ -37,7 +37,7 @@ class ExoScore(Source):
         if vsx is None:
             vsx = VSX(observatory)
         self.vsx: VSX = vsx
-        self.scores_data: Table
+        self.scores_data: Table|None = None
         self.scores: Dict[str, TargetScore] = {}
         self._load_data()
         
@@ -51,6 +51,9 @@ class ExoScore(Source):
             self._calc_and_save()
         else:
             self.scores_data = Table.read(self.cache_file, path=self.name)
+        if self.scores_data is None:
+            return
+        
         self.scores = {
             row[0]: TargetScore(row[0], row[1], row[7])
             for row in self.scores_data
@@ -73,7 +76,8 @@ class ExoScore(Source):
         ec['c'] = SkyCoord(ec['radec'], unit=(u.hour, u.deg))
         ec['ra'] = ec['c'].ra.deg
         ec['dec'] = ec['c'].dec.deg
-
+        if len(self.vsx.r_target_data) == 0:
+            return
         g = self.vsx.r_target_data.group_by(['ra','dec','radius','limiting_mag'])
         num_tofo = np.diff(g.groups.indices)
                 

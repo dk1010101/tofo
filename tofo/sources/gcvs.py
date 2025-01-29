@@ -9,7 +9,7 @@ from astropy.table import Table
 from astroquery.utils.tap.core import Tap
 
 from tofo.observatory import Observatory
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.sources.source import Source
 from tofo.sources.utils import fix_str_types, create_target
 

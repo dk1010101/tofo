@@ -17,6 +17,9 @@ from astroplan.plots import plot_sky
 from palettable.tableau import ColorBlind_10
 
 from matplotlib.axes import Axes
+from matplotlib.patches import Arc, RegularPolygon
+
+from numpy import radians as rad
 
 import wx
 import wx.adv
@@ -25,12 +28,12 @@ import wx.grid
 from ui.target_dialog import TargetDialog
 from ui.loading_dialog import LoadingDialog
 from tofo.observatory import Observatory
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.exoclock_targets import ExoClockTargets
 from tofo.sources.object_db import ObjectDB
-from tofo.ui_altaz_plot import plot_altaz_sky
-from tofo.ui_list_slider import ListSlider
-from tofo.ui_mpl_canvas import MatplotlibCanvas
+from ui.lib.altaz_plot import plot_altaz_sky
+from ui.lib.list_slider import ListSlider
+from ui.lib.mpl_canvas import MatplotlibCanvas
 
 class MainFrame(wx.Frame):
     """The main UI frame."""
@@ -228,8 +231,11 @@ class MainFrame(wx.Frame):
         sizer_grid_vis_controls.Add(label_ls_title, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, 0)
         self.sl_altaz_mid = ListSlider(self.panel_main, wx.ID_ANY, ['N','E','S','W'])
         self.sl_altaz_mid.SetValue('S')
-        sizer_grid_vis_controls.Add(self.sl_altaz_mid,0, wx.EXPAND, 0)       
-                
+        sizer_grid_vis_controls.Add(self.sl_altaz_mid,0, wx.EXPAND, 0)
+        self.cb_circ_arrow = wx.CheckBox(self.panel_main, wx.ID_ANY, "Show Sky Rotation Arrow")
+        self.cb_circ_arrow.SetValue(False)
+        sizer_grid_vis_controls.Add(self.cb_circ_arrow, 0, wx.EXPAND, 0)
+        
         # and we are done
         self.panel_main.SetSizer(sizer_main)
         
@@ -254,6 +260,7 @@ class MainFrame(wx.Frame):
         self.tp_end.Bind(wx.adv.EVT_TIME_CHANGED, self.on_tdp_end_change)
         self.bt_dt_apply_all.Bind(wx.EVT_BUTTON, self.on_bt_dt_apply_all)
         self.sl_altaz_mid.Bind(wx.EVT_SLIDER, self.on_sl_altaz_mid_change)
+        self.cb_circ_arrow.Bind(wx.EVT_CHECKBOX, self.on_cb_circ_arrow)
         # canvas events
         self.canvas_polar.mpl_connect('pick_event', self.on_canvas_pick)
         self.canvas_altaz.mpl_connect('pick_event', self.on_canvas_pick)
@@ -275,7 +282,7 @@ class MainFrame(wx.Frame):
         now = datetime.now()
         obs_time = Time(now.isoformat()[:10]+"T23:00:00.0")
         self.start_time = self.observatory.observer.twilight_evening_civil(obs_time) - self.observatory.timezone_offset
-        self.end_time = self.observatory.observer.twilight_morning_civil(obs_time) - self.observatory.timezone_offset
+        self.end_time = self.observatory.observer.twilight_morning_civil(obs_time+23*u.hour) - self.observatory.timezone_offset
         self.vis_refresh_datetimes()
    
     def plot_polar_horizon(self):
@@ -283,6 +290,8 @@ class MainFrame(wx.Frame):
         if not self.ax_polar:
             self.ax_polar = self.figure_polar.add_subplot(1, 1, 1, projection='polar')
             # self.ax.set_prop_cycle('color', ColorBlind_10.mpl_colors)
+        
+        # create horizon, every 5 degrees
         h = [(x[0]*np.pi/180.0, 90-x[1]) for x in self.observatory.horizon]
         theta = [x[0] for x in h]
         r = [x[1] for x in h]
@@ -337,6 +346,12 @@ class MainFrame(wx.Frame):
                                        'picker': True
                                    },
                                    midpoint=self.altaz_plot_midpoint)
+        if self.cb_circ_arrow.GetValue():  # draw arrows
+            lat = self.observatory.location.lat.value
+            self.ax_altaz.plot([0],[lat], marker=r'$\circlearrowleft$', ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([360],[lat], marker=r'$\circlearrowleft$', ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([-180],[lat], marker=r'$\circlearrowright$', ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([180],[lat], marker=r'$\circlearrowright$', ms=14, linewidth=1, color='black')
         self.canvas_altaz.draw()
 
     def _setup_second_altaz_x_axis(self,):
@@ -408,6 +423,12 @@ class MainFrame(wx.Frame):
                                       'picker': True
                                    },
                                    midpoint=self.altaz_plot_midpoint)
+        if self.cb_circ_arrow.GetValue():  # draw arrows
+            lat = self.observatory.location.lat.value
+            self.ax_altaz.plot([0],[lat], marker=r'$\circlearrowleft$', ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([360],[lat], marker=r'$\circlearrowleft$', ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([-180],[lat], marker=r'$\circlearrowright$', ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([180],[lat], marker=r'$\circlearrowright$', ms=14, linewidth=1, color='black')
                     # have_targets = True
         # if self.ax and have_targets:
         #    self.ax.legend(loc='lower left', bbox_to_anchor=(-0.4, 0.2))
@@ -552,6 +573,7 @@ class MainFrame(wx.Frame):
         ex = ExoClockTargets(self.observatory)
         with wx.BusyCursor():
             self.targets = ex.get_all_transits(self.start_time, self.end_time, True)
+
         self.vis_refresh_targets()
 
     def on_menu_exit_app(self, event):  # pylint:disable=unused-argument
@@ -703,4 +725,8 @@ class MainFrame(wx.Frame):
         }
         v = self.sl_altaz_mid.GetValue()
         self.altaz_plot_midpoint = trans[v]
+        self.plot_full_altaz_horizon()
+
+    def on_cb_circ_arrow(self, event: wx.CommandEvent):  # pylint:disable=unused-argument
+        """Add sky rotation arrows to the alt-az plot."""
         self.plot_full_altaz_horizon()

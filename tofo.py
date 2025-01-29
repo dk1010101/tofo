@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # pylint: disable=invalid-name
+import logging
 from yaml import load
 try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
 
+import matplotlib
 import wx
 
 from ui.main_frame import MainFrame
-from ui.splash import TofoSplashScreen
+from ui.lib.splash import TofoSplashScreen
 from tofo.observatory import Observatory
 from tofo.sources.object_db import ObjectDB
 from tofo.thread_with_return import ThreadWithReturnValue
@@ -58,7 +60,9 @@ def load_observatory_data() -> Observatory:
         return Observatory(obsdata)
 
 if __name__ == "__main__":
-
+    logging.basicConfig(level=logging.DEBUG)
+    matplotlib.pyplot.set_loglevel (level='warning')    
+    
     obsobj = load_observatory_data()
     TofO = TOFOApp(observatory=obsobj)
     

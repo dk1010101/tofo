@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.coordinates import EarthLocation
 from astroplan import Observer, Constraint, AtNightConstraint
 
-from tofo.constraint.planner_horizon_constraint import HorizonConstraint
+from tofo.constraint.horizon_constraint import HorizonConstraint, get_interpolator
 
 
 class SourceDefinition(NamedTuple):
@@ -32,7 +32,12 @@ class Observatory:
         This "constructor" also creates horizon and twilight constraint list, if the right data
         is passed in.
         """
-        self.files_root: Path = Path(data.get('files_root', '.'))
+        config = data.get("config", {})
+        if not config:
+            raise ValueError("Incorrect observatory.yaml format. config section is missing.")
+        self.files_root: Path = Path(config.get('files_root', '.'))
+        liip = config.get('load_images_in_parallel', "false")
+        self.config_load_images_in_parallel = bool(liip)
         self.location: EarthLocation = EarthLocation.from_geodetic(lon=data['observatory']['lon_deg'] * u.deg, 
                                                                    lat=data['observatory']['lat_deg'] * u.deg, 
                                                                    height=data['observatory']['elevation_m'] * u.m)
@@ -81,11 +86,16 @@ class Observatory:
             hf = data['observatory']['horizon_file']
             with open(self.files_root.joinpath(hf).as_posix(), 'r', encoding="utf-8") as file:
                 csv_reader = csv.reader(file) # pass the file object to reader() to get the reader object
-                self.horizon = [(float(e[0]), float(e[1])) for e in list(csv_reader)]
+                horizon = [(float(e[0]), float(e[1])) for e in list(csv_reader)]
         else:
-            self.horizon = [(0.0, 0.0), (90.0, 0.0), (180.0, 0.0), (270.0, 0.0), (360.0, 0.0)]      
-        horizon_constraint = HorizonConstraint(self.horizon)
-        self.constraints.append(horizon_constraint)
+            horizon = [(0.0, 0.0), (90.0, 0.0), (180.0, 0.0), (270.0, 0.0), (360.0, 0.0)]
+        # interpolate the horizon
+        interpolator = get_interpolator(horizon)
+        az = np.linspace(0, 360, 180+1)  # every 2 degrees
+        alt = interpolator(az)
+        self.horizon = list(zip(az, alt))
+        self.horizon_constraint = HorizonConstraint(self.horizon, az_interpolator=interpolator)
+        self.constraints.append(self.horizon_constraint)
 
         self.sources = {}
         sources: dict = data["sources"]

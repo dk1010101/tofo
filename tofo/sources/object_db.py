@@ -6,7 +6,7 @@ from typing import List, Any
 from astroplan import download_IERS_A
 
 from tofo.observatory import Observatory
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.sources.aavso import VSX
 from tofo.sources.gcvs import GCVS
 from tofo.sources.nasa_exo import NasaExoArchive
@@ -19,7 +19,7 @@ class ObjectDB():
     """Collection of all different data sources and mechanisms to query them."""
     def __init__(self, observatory: Observatory):
         
-        download_IERS_A() ## update IERS BUlletin A held in the cache. Check https://astroplan.readthedocs.io/en/stable/faq/iers.html for more info.
+        download_IERS_A() # update IERS BUlletin A held in the cache. Check https://astroplan.readthedocs.io/en/stable/faq/iers.html for more info.
         
         self.observatory = observatory
         

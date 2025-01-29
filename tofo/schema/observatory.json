@@ -1,0 +1,147 @@
+{  
+    "$schema": "https://json-schema.org/draft/2020-12/schema",  
+    "$id": "https://kustrin.com/schema/observatory.json",  
+    "title": "Observatory",
+    "description": "Definition of an observatory-sensor combination.",  
+    "type": "object",
+    "properties": {
+        "observatory": {
+            "description": "Physical properties of the observatory.",  
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Observatory name",
+                    "type": "string"
+                },
+                "lat_deg": {
+                    "description": "Observatory latitude in degrees",
+                    "type": "float"
+                },
+                "log_deg": {
+                    "description": "Observatory longitude in degrees",
+                    "type": "float"
+                },
+                "elevation_m": {
+                    "description": "Observatory elevation in meters",
+                    "type": "float"
+                },
+                "time_zone": {
+                    "description": "Observatory time zone",
+                    "type": "string"
+                },
+                "temperature_C": {
+                    "description": "Observatory 'usual' temperature in Celsius",
+                    "type": "float"
+                },
+                "rel_humidity_percentage": {
+                    "description": "Observatory 'usual' relative humidity in percentages so eg 99 for 99% relative humidity",
+                    "type": "float"
+                },
+                "pressure_hPa": {
+                    "description": "Observatory 'usual' air pressure in hPa",
+                    "type": "float"
+                },
+                "horizon_file": {
+                    "description": "file name for the horizon csv file",
+                    "type": "string"
+                }
+            }
+        },
+        "telescope": {
+            "description": "Definition of the telescope-sensor.",  
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Telescope name",
+                    "type": "string"
+                },
+                "focal_length_mm": {
+                    "description": "Telescope focal length in mm",
+                    "type": "float"
+                },
+                "aperture_mm": {
+                    "description": "Telescope aperture length in mm",
+                    "type": "float"
+                },
+                "sensor": {
+                    "description": "Telescope name",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "description": "Sensor name",
+                            "type": "string"
+                        },
+                        "size_x_mm": {
+                            "description": "Sensor's x size in mm",
+                            "type": "float"
+                        },
+                        "size_y_mm": {
+                            "description": "Sensor's x size in mm",
+                            "type": "float"
+                        },
+                        "num_pix_x": {
+                            "description": "Sensor's number of pixels in the x direction",
+                            "type": "integer"
+                        },
+                        "num_pix_y": {
+                            "description": "Sensor's number of pixels in the y direction",
+                            "type": "integer"
+                        },
+                        "pix_x_size_um": {
+                            "description": "Sensor pixel's x size in um",
+                            "type": "float"
+                        },
+                        "pix_y_size_um": {
+                            "description": "Sensor pixel's y size in um",
+                            "type": "float"
+                        },
+                        "crota1": {
+                            "description": "Sensor rotation factor 1. See documentation.",
+                            "type": "float"
+                        },
+                        "crota2": {
+                            "description": "Sensor rotation factor 2. See documentation",
+                            "type": "float"
+                        }
+                    }
+                }
+            }
+        },
+        "observations": {
+            "description": "Definition of an observatory-sensor combination.",  
+            "type": "object",
+            "properties": {
+                "twilight": {
+                    "description": "Which twilight should be used as one of the observation constraints?",
+                    "enum": ["civil", "nautical", "astronomical"]
+                },
+                "min_mag": {
+                    "description": "Minimum magnitude worth observing with this telescope-sensor combination",
+                    "type": "float"
+                },
+                "exo_hours_before": {
+                    "description": "Number of hours sessions should start before exoplanet transit start",
+                    "type": "float"
+                },
+                "exo_hours_after": {
+                    "description": "Number of hours sessions should continue after exoplanet transit end",
+                    "type": "float"
+                }
+            }
+        },
+        "sources": {
+            "description": "Definition of an observatory-sensor combination.",  
+            "type": "object",
+            "properties": {
+                "cache_file": {
+                    "description": "Name of the cache file",
+                    "type": "string"
+                },
+                "cache_image_dir": {
+                    "description": "Directory under the files root where the cache will be stored",
+                    "type": "string"
+                }              
+            }
+        }
+    }
+}

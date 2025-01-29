@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
 
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.observatory import Observatory
 
 from tofo.sources.source import Source

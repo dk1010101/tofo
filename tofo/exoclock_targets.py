@@ -5,7 +5,7 @@ from typing import List
 from astropy.time import Time
 
 from tofo.sources.exoclock import ExoClock
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.observatory import Observatory
 
 

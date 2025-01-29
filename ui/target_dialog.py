@@ -23,9 +23,9 @@ import wx.grid
 # end wxGlade
 
 from ui.loading_dialog import LoadingDialog
-from tofo.ui_mpl_canvas import MatplotlibCanvas
+from ui.lib.mpl_canvas import MatplotlibCanvas
 from tofo.observatory import Observatory
-from tofo.targets import Target
+from tofo.target import Target
 from tofo.sources.object_db import ObjectDB
 
 
