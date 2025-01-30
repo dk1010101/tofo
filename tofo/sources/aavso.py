@@ -12,8 +12,7 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Table
 
 from tofo.target import Target
-from tofo.observatory import Observatory
-
+from tofo.observatory import Observatories
 from tofo.sources.source import Source
 from tofo.sources.utils import create_target, fix_str_types
 
@@ -34,8 +33,8 @@ class VSX(Source):
     path_single_target = 'single'
     path_radius_targets = 'radius'
     
-    def __init__(self, observatory: Observatory, cache_life_days: float | None = None):
-        super().__init__(observatory, cache_life_days)
+    def __init__(self, observatories: Observatories, cache_life_days: float | None = None):
+        super().__init__(observatories, cache_life_days)
         self.target_data: Table = Table(names=("Name", "AUID", "OID", "Constellation", 
                                                "RA2000", "Declination2000", "RA DEC",
                                                "VariabilityType",
@@ -79,7 +78,7 @@ class VSX(Source):
             self.target_data = Table.read(self.cache_file, path=self.name+'/'+self.path_single_target)
             self.r_target_data = Table.read(self.cache_file, path=self.name+'/'+self.path_radius_targets)
         self.targets = {
-            row['Name']: create_target(self.observatory,
+            row['Name']: create_target(self.observatories.observatory,
                                        name=row['Name'], 
                                        ra_deg=row['RA2000'],
                                        dec_deg=row['Declination2000'],
@@ -101,7 +100,7 @@ class VSX(Source):
             if rt != old_rt:
                 self.r_targets[rt] = []
                 old_rt = rt
-            t = create_target(self.observatory,
+            t = create_target(self.observatories.observatory,
                               name=row['Name'], 
                               ra_deg=row['RA2000'],
                               dec_deg=row['Declination2000'],
@@ -211,7 +210,7 @@ class VSX(Source):
         self.target_data.write(self.cache_file, path=self.name+'/'+self.path_single_target, append=True, overwrite=True)
         self.update_age()
             
-        t = create_target(self.observatory,
+        t = create_target(self.observatories.observatory,
                           name=new_row[0],
                           ra_deg=new_row[4],
                           dec_deg=new_row[5],

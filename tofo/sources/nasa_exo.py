@@ -13,7 +13,7 @@ from astropy.time import Time
 from astropy.table import Table
 
 from tofo.target import Target
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 
 from tofo.sources.source import Source
 from tofo.sources.utils import fix_str_types
@@ -26,8 +26,8 @@ class NasaExoArchive(Source):
     """
     name = 'nasa_exo_archive'
     
-    def __init__(self, observatory: Observatory, cache_life_days: float | None = None):
-        super().__init__(observatory, cache_life_days)
+    def __init__(self, observatories: Observatories, cache_life_days: float | None = None):
+        super().__init__(observatories, cache_life_days)
         
         self.exoplanets: Dict[str, Target] = {}
         self.exoplanets_data: Table
@@ -75,7 +75,7 @@ class NasaExoArchive(Source):
             if _not_valid_field(ex):
                 ex = 0.0
             
-            t = Target(observatory=self.observatory, 
+            t = Target(observatory=self.observatories.observatory, 
                        name=exo['hostname'], 
                        ra_j2000=exo['ra'],
                        dec_j2000=exo['dec'],

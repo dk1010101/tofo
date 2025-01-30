@@ -17,20 +17,18 @@ from astroplan.plots import plot_sky
 from palettable.tableau import ColorBlind_10
 
 from matplotlib.axes import Axes
-from matplotlib.patches import Arc, RegularPolygon
-
-from numpy import radians as rad
 
 import wx
 import wx.adv
 import wx.grid
 
-from ui.target_dialog import TargetDialog
-from ui.loading_dialog import LoadingDialog
-from tofo.observatory import Observatory
+from tofo.observatory import Observatory, Observatories
 from tofo.target import Target
 from tofo.exoclock_targets import ExoClockTargets
 from tofo.sources.object_db import ObjectDB
+
+from ui.target_dialog import TargetDialog
+from ui.loading_dialog import LoadingDialog
 from ui.lib.altaz_plot import plot_altaz_sky
 from ui.lib.list_slider import ListSlider
 from ui.lib.mpl_canvas import MatplotlibCanvas
@@ -44,8 +42,9 @@ class MainFrame(wx.Frame):
         self.objectdb: ObjectDB        
         margin_size = 8
         
-        self.observatory: Observatory = kwds['observatory']
-        del kwds['observatory']
+        self.observatories: Observatories = kwds['observatories']
+        self.observatory: Observatory = self.observatories.observatory
+        del kwds['observatories']
         
         self.targets: List[Target] = []
         self.ax_polar: Axes = None
@@ -304,6 +303,8 @@ class MainFrame(wx.Frame):
    
     def plot_altaz_horizon(self):
         """Plot the horizon and targets on an alt-az type plot."""
+        
+        # TODO: plotting for equator or souther hemisphere may (will) be iffy
         self.figure_altaz.clf()
         self.ax_altaz = self.figure_altaz.add_subplot(1, 1, 1)
         
@@ -348,11 +349,21 @@ class MainFrame(wx.Frame):
                                    midpoint=self.altaz_plot_midpoint)
         if self.cb_circ_arrow.GetValue():  # draw arrows
             lat = self.observatory.location.lat.value
-            self.ax_altaz.plot([0],[lat], marker=r'$\circlearrowleft$', ms=14, linewidth=1, color='black')
-            self.ax_altaz.plot([360],[lat], marker=r'$\circlearrowleft$', ms=14, linewidth=1, color='black')
-            self.ax_altaz.plot([-180],[lat], marker=r'$\circlearrowright$', ms=14, linewidth=1, color='black')
-            self.ax_altaz.plot([180],[lat], marker=r'$\circlearrowright$', ms=14, linewidth=1, color='black')
+            marker_north, marker_south = self._get_rotation_markers()
+            self.ax_altaz.plot([0],[lat], marker=marker_north, ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([360],[lat], marker=marker_north, ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([-180],[lat], marker=marker_south, ms=14, linewidth=1, color='black')
+            self.ax_altaz.plot([180],[lat], marker=marker_south, ms=14, linewidth=1, color='black')
         self.canvas_altaz.draw()
+
+    def _get_rotation_markers(self) -> None:
+        """get star movement markers based on observatory latitude"""
+        if self.observatory.location.lat > 0.0:
+            return r'$\circlearrowleft$', r'$\circlearrowright$'
+        if self.observatory.location.lat < 0.0:
+            return r'$\circlearrowright$', r'$\circlearrowleft$'
+        if self.observatory.location.lat == 0.0:
+            return r'$\circlearrowleft$', r'$\circlearrowleft$'
 
     def _setup_second_altaz_x_axis(self,):
         """Create a second x axis for the alt-az plot to show where compass NEWS positions are."""
@@ -570,7 +581,7 @@ class MainFrame(wx.Frame):
             result = dlg.ShowModal()
             if result == wx.ID_NO:
                 return
-        ex = ExoClockTargets(self.observatory)
+        ex = ExoClockTargets(self.observatories)
         with wx.BusyCursor():
             self.targets = ex.get_all_transits(self.start_time, self.end_time, True)
 

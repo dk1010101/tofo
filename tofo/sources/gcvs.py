@@ -8,7 +8,7 @@ import astropy.units as u
 from astropy.table import Table
 from astroquery.utils.tap.core import Tap
 
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 from tofo.target import Target
 from tofo.sources.source import Source
 from tofo.sources.utils import fix_str_types, create_target
@@ -25,8 +25,8 @@ SELECT "B/gcvs/gcvs_cat".GCVS, "B/gcvs/gcvs_cat".VarName as name, "B/gcvs/gcvs_c
 FROM "B/gcvs/gcvs_cat"
 """
     
-    def __init__(self, observatory: Observatory, cache_life_days: float | None = None):
-        super().__init__(observatory, cache_life_days)
+    def __init__(self, observatories: Observatories, cache_life_days: float | None = None):
+        super().__init__(observatories, cache_life_days)
         self.tap = Tap(url="https://TAPVizieR.cds.unistra.fr/TAPVizieR/tap")
         
         self.exoplanets: Dict[str, Target] = {}
@@ -87,7 +87,7 @@ FROM "B/gcvs/gcvs_cat"
                 
             name = (' '.join(row['name'].split())).strip()
             gcvs_name = (' '.join(row['GCVS'].split())).strip()
-            t = create_target(self.observatory,
+            t = create_target(self.observatories.observatory,
                               name,
                               ra,
                               dec,

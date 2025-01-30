@@ -6,20 +6,20 @@ from astropy.time import Time
 
 from tofo.sources.exoclock import ExoClock
 from tofo.target import Target
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 
 
 class ExoClockTargets():
     """Collection of methods used to get exoplanet transits for a specific period."""
     
-    def __init__(self, observatory: Observatory):
+    def __init__(self, observatories: Observatories):
         """Initialise the object and load the exoclock data.
 
         Args:
             observatory (Observatory): Observatory used to perform observations.
         """
-        self.observatory = observatory
-        self.archive = ExoClock(self.observatory)
+        self.observatories = observatories
+        self.archive = ExoClock(self.observatories)
         self.targets: List[Target] = self.archive.get_telescope_filtered_targets()
         self.get_all_transits = lru_cache(maxsize=None)(self._get_all_transits)
         

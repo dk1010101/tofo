@@ -9,7 +9,7 @@ import numpy as np
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
-from astroplan import FixedTarget, EclipsingSystem, TimeConstraint, is_event_observable
+from astroplan import FixedTarget, EclipsingSystem, is_event_observable
 
 from tofo.observatory import Observatory
 

@@ -13,7 +13,7 @@ from astropy.time import Time
 from astropy.table import Table, Row
 
 from tofo.target import Target
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 
 from tofo.sources.source import Source
 from tofo.sources.utils import fix_str_types
@@ -23,8 +23,8 @@ class ExoClock(Source):
     """Wrapper around Exoclock datasource"""
     name = 'exoclock'
     
-    def __init__(self, observatory: Observatory, cache_life_days: float | None = None):
-        super().__init__(observatory, cache_life_days)
+    def __init__(self, observatories: Observatories, cache_life_days: float | None = None):
+        super().__init__(observatories, cache_life_days)
         
         self.exoplanets_data: Table
         self.exoplanets: Dict[str, Target] = {}
@@ -55,7 +55,7 @@ class ExoClock(Source):
 
     def _create_target(self, exo: Row) -> Target:
         """Create a target from the table row."""
-        t = Target(observatory=self.observatory, 
+        t = Target(observatory=self.observatories.observatory, 
                        name=exo['name'],
                        star_name=exo['star'],
                        ra_j2000=exo['ra_j2000'],
@@ -107,11 +107,11 @@ class ExoClock(Source):
         s = scale.lower()
         if s == 'local':
             s = 'Local'
-        return Time(time_string, format=f, scale=s, location=self.observatory.location)
+        return Time(time_string, format=f, scale=s, location=self.observatories.observatory.location)
 
     def get_telescope_filtered_targets(self) -> List[Target]:
         """Create a list of Targets that are all observable by the provided observatory."""
-        aperture_inches: float = self.observatory.aperture.to(u.imperial.inch).value
+        aperture_inches: float = self.observatories.observatory.aperture.to(u.imperial.inch).value
         mask = self.exoplanets_data['min_telescope_inches'] <= aperture_inches
         possible_targets_data = self.exoplanets_data[mask]
         return [self._create_target(r) for r in possible_targets_data]

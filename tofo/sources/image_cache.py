@@ -10,18 +10,18 @@ from astropy.io import fits
 from pyvo import registry
 
 from tofo.target import Target
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 
 
 class ImageCache():
     """Simple file-based cache for fist images."""
-    def __init__(self, observatory: Observatory):
+    def __init__(self, observatories: Observatories):
         self.log = logging.getLogger()
-        self.observatory = observatory
+        self.observatories = observatories
         
         # get the cache directory for this observatory and sensor
-        path = observatory.sources_cache_image_dir.joinpath(self.observatory.observer.name)
-        path = path.joinpath(self.observatory.sensor_name)
+        path = observatories.cache_image_dir.joinpath(self.observatories.observatory.observer.name)
+        path = path.joinpath(self.observatories.observatory.sensor_name)
         path.mkdir(parents=True, exist_ok=True)
         self.path: Path = path
         
@@ -34,7 +34,7 @@ class ImageCache():
         """Given a target name, get the image in the fov for the current observatory/telescope"""
         res = self._load_from_cache(target)
         if res is None:
-            _, res = self._get_remote_fits(self.dss_services, self.observatory.fov, self.path, target)
+            _, res = self._get_remote_fits(self.dss_services, self.observatories.observatory.fov, self.path, target)
         return res
         
     @staticmethod
@@ -108,5 +108,5 @@ class ImageCache():
                 futures.append(executor.submit(self._get_remote_fits, 
                                                target=target, 
                                                dss_services=self.dss_services, 
-                                               fov=self.observatory.fov,
+                                               fov=self.observatories.observatory.fov,
                                                save_path=self.path))

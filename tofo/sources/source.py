@@ -10,7 +10,7 @@ from astropy.table import Table
 from astropy.time import Time
 
 from tofo.target import Target
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 
 
 class Source(ABC):
@@ -18,19 +18,19 @@ class Source(ABC):
     name = 'no name'
     
     def __init__(self, 
-                 observatory: Observatory, 
+                 observatories: Observatories,
                  cache_life_days: float | None = None):
         self.log = logging.getLogger()
-        self.observatory: Observatory = observatory
+        self.observatories: Observatories = observatories
         self.ages_table: Table
         self.age_days: u.Quantity
         
-        self.cache_file: Path = observatory.sources_cache_file_name
+        self.cache_file: Path = self.observatories.cache_file
         if cache_life_days is None:
-            src = observatory.sources.get(self.name, None)
+            src = self.observatories.sources.get(self.name, None)
             if src is None:
                 raise ValueError(f"Could not instantiate source object with {self.name} as the observatory did not have the source settings for it.")
-            age = observatory.sources[self.name].cache_life_days
+            age = self.observatories.sources[self.name].cache_life_days
             if age.value < 0.0:
                 age = 100_000.0 * u.day # "never" or rather "almost 274 years" :D
             self.cache_life_days: u.Quantity = age 

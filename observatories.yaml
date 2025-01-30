@@ -1,0 +1,51 @@
+# cSpell:ignore tofo exoclock aavso gcvs
+################################################
+default_observatory: "Ickenham Observatory"
+################################################
+observatories:
+  - name: "Ickenham Observatory"
+    physical:
+      lat_deg: 51.55610
+      lon_deg: -0.447553
+      elevation_m: 47.0
+      time_zone: "Europe/London"
+      temperature_C: 2.0
+      rel_humidity_percentage: 99.0
+      pressure_hPa: 1016.6
+      horizon_file: "horizon2.csv"
+    instrument:
+      optics:
+        name: "SW200"
+        focal_length_mm: 1200.0
+        aperture_mm: 203.0
+      sensor:
+        name: "Zwo ASI2600MM Pro"
+        size_x_mm: 23.5
+        size_y_mm: 15.7
+        num_pix_x: 6248
+        num_pix_y: 4176
+        pix_x_size_um: 3.76
+        pix_y_size_um: 3.76
+        crota1: 0.0
+        crota2: 0.0
+    configuration:
+      twilight: "civil"
+      limiting_mag: 15.0
+      exo_hours_before: 1.0
+      exo_hours_after: 1.0
+################################################
+configuration:
+  root: "."
+  cache_file: "tofo.hdf5"
+  data_sources:
+    - name: "exoclock"
+      cache_life_days: 30.0
+    - name: "nasa_exo_archive"
+      cache_life_days: 90.0
+      use: false
+    - name: "aavso_vsx"
+      cache_life_days: -1.0
+    - name: "gcvs"
+      cache_life_days: 180.0
+    - name: "exo_score"
+      cache_life_days: -1.0

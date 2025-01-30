@@ -12,6 +12,7 @@ from astropy.table import Table
 from astropy.time import Time
 
 from tofo.target import Target
+from tofo.observatory import Observatories
 from tofo.sources.source import Source
 from tofo.sources.aavso import VSX
 from tofo.sources.exoclock import ExoClock
@@ -31,11 +32,12 @@ class ExoScore(Source):
     name = "exo_score"
     
     def __init__(self, 
-                 observatory, cache_life_days = None, 
+                 observatories: Observatories, 
+                 cache_life_days: float|None = None, 
                  vsx: VSX = None):
-        super().__init__(observatory, cache_life_days)
+        super().__init__(observatories, cache_life_days)
         if vsx is None:
-            vsx = VSX(observatory)
+            vsx = VSX(observatories)
         self.vsx: VSX = vsx
         self.scores_data: Table|None = None
         self.scores: Dict[str, TargetScore] = {}
@@ -70,7 +72,7 @@ class ExoScore(Source):
     def _calc_and_save(self) -> None:
         """Calculate the score based on various rankings."""
         # setup exoclock data
-        exoclock: ExoClock = ExoClock(self.observatory)  # we need a local copy
+        exoclock: ExoClock = ExoClock(self.observatories)  # we need a local copy
         ec = exoclock.exoplanets_data
         ec['radec'] = [f"{r} {d}" for r,d in zip(ec['ra_j2000'], ec['dec_j2000'])]
         ec['c'] = SkyCoord(ec['radec'], unit=(u.hour, u.deg))

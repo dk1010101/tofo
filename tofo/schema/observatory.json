@@ -5,25 +5,35 @@
     "description": "Definition of an observatory-sensor combination.",  
     "type": "object",
     "properties": {
-        "observatory": {
+        "default_observatory": {
+            "description": "Name of the observatory from the observatory list that will be used as the default.",
+            "type": "string"
+        },
+        "observatories": {
+            "$ref": "#/$defs/observatories"
+        },
+        "configuration": {
+            "$ref": "#/$defs/configuration"
+        }
+    },
+    "additionalProperties": false,
+    "minProperties": 3,
+    "$defs": {
+        "physical_properties": {
             "description": "Physical properties of the observatory.",  
             "type": "object",
             "properties": {
-                "name": {
-                    "description": "Observatory name",
-                    "type": "string"
-                },
                 "lat_deg": {
                     "description": "Observatory latitude in degrees",
-                    "type": "float"
+                    "type": "number"
                 },
                 "log_deg": {
                     "description": "Observatory longitude in degrees",
-                    "type": "float"
+                    "type": "number"
                 },
                 "elevation_m": {
                     "description": "Observatory elevation in meters",
-                    "type": "float"
+                    "type": "number"
                 },
                 "time_zone": {
                     "description": "Observatory time zone",
@@ -31,24 +41,70 @@
                 },
                 "temperature_C": {
                     "description": "Observatory 'usual' temperature in Celsius",
-                    "type": "float"
+                    "type": "number"
                 },
                 "rel_humidity_percentage": {
                     "description": "Observatory 'usual' relative humidity in percentages so eg 99 for 99% relative humidity",
-                    "type": "float"
+                    "type": "number"
                 },
                 "pressure_hPa": {
                     "description": "Observatory 'usual' air pressure in hPa",
-                    "type": "float"
+                    "type": "number"
                 },
                 "horizon_file": {
                     "description": "file name for the horizon csv file",
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false,
+            "minProperties": 8
         },
-        "telescope": {
-            "description": "Definition of the telescope-sensor.",  
+        "imaging_sensor": {
+            "description": "Telescope name",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Sensor name",
+                    "type": "string"
+                },
+                "size_x_mm": {
+                    "description": "Sensor's x size in mm",
+                    "type": "number"
+                },
+                "size_y_mm": {
+                    "description": "Sensor's x size in mm",
+                    "type": "number"
+                },
+                "num_pix_x": {
+                    "description": "Sensor's number of pixels in the x direction",
+                    "type": "integer"
+                },
+                "num_pix_y": {
+                    "description": "Sensor's number of pixels in the y direction",
+                    "type": "integer"
+                },
+                "pix_x_size_um": {
+                    "description": "Sensor pixel's x size in um",
+                    "type": "number"
+                },
+                "pix_y_size_um": {
+                    "description": "Sensor pixel's y size in um",
+                    "type": "number"
+                },
+                "crota1": {
+                    "description": "Sensor rotation factor 1. See documentation.",
+                    "type": "number"
+                },
+                "crota2": {
+                    "description": "Sensor rotation factor 2. See documentation",
+                    "type": "number"
+                }
+            },
+            "additionalProperties": false,
+            "minProperties": 9
+        },
+        "optical_properties": {
+            "description": "Optical properties of an instrument (including the telescope)",
             "type": "object",
             "properties": {
                 "name": {
@@ -57,90 +113,113 @@
                 },
                 "focal_length_mm": {
                     "description": "Telescope focal length in mm",
-                    "type": "float"
+                    "type": "number"
                 },
                 "aperture_mm": {
                     "description": "Telescope aperture length in mm",
-                    "type": "float"
+                    "type": "number"
                 },
-                "sensor": {
-                    "description": "Telescope name",
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "description": "Sensor name",
-                            "type": "string"
-                        },
-                        "size_x_mm": {
-                            "description": "Sensor's x size in mm",
-                            "type": "float"
-                        },
-                        "size_y_mm": {
-                            "description": "Sensor's x size in mm",
-                            "type": "float"
-                        },
-                        "num_pix_x": {
-                            "description": "Sensor's number of pixels in the x direction",
-                            "type": "integer"
-                        },
-                        "num_pix_y": {
-                            "description": "Sensor's number of pixels in the y direction",
-                            "type": "integer"
-                        },
-                        "pix_x_size_um": {
-                            "description": "Sensor pixel's x size in um",
-                            "type": "float"
-                        },
-                        "pix_y_size_um": {
-                            "description": "Sensor pixel's y size in um",
-                            "type": "float"
-                        },
-                        "crota1": {
-                            "description": "Sensor rotation factor 1. See documentation.",
-                            "type": "float"
-                        },
-                        "crota2": {
-                            "description": "Sensor rotation factor 2. See documentation",
-                            "type": "float"
-                        }
-                    }
-                }
+                "additionalProperties": false,
+                "minProperties": 2
             }
         },
-        "observations": {
-            "description": "Definition of an observatory-sensor combination.",  
+        "instrument": {
+            "description": "Definition of the optics+sensor instrument ie telescope+imaging setup",
+            "type": "object",
+            "properties": {
+                "optics": { "$ref": "#/$defs/optical_properties" },
+                "sensor": { "$ref": "#/$defs/imaging_sensor" }
+            },
+            "additionalProperties": false,
+            "minProperties": 2
+        },
+        "imaging_configuration": {
+            "description": "Limits and preferences for the specific instrument",
             "type": "object",
             "properties": {
                 "twilight": {
                     "description": "Which twilight should be used as one of the observation constraints?",
                     "enum": ["civil", "nautical", "astronomical"]
                 },
-                "min_mag": {
-                    "description": "Minimum magnitude worth observing with this telescope-sensor combination",
-                    "type": "float"
+                "limiting_mag": {
+                    "description": "Limiting magnitude that will be used filter off targets of opportunity. This is accross all filters and, yes, at some point we will add filter filtering too and then this will be a list of objects.",
+                    "type": "number"
                 },
                 "exo_hours_before": {
                     "description": "Number of hours sessions should start before exoplanet transit start",
-                    "type": "float"
+                    "type": "number"
                 },
                 "exo_hours_after": {
                     "description": "Number of hours sessions should continue after exoplanet transit end",
-                    "type": "float"
+                    "type": "number"
                 }
-            }
+            },
+            "additionalProperties": false,
+            "required": ["twilight", "limiting_mag"]
         },
-        "sources": {
-            "description": "Definition of an observatory-sensor combination.",  
+        "observatory": {
+            "description": "",
             "type": "object",
             "properties": {
+                "name": {
+                    "description": "Observatory name",
+                    "type": "string"
+                },
+                "physical": {" $ref": "#/$defs/physical_properties" },
+                "instrument": { "$ref": "#/$defs/instrument" },
+                "configuration": { "$ref": "#/$defs/imaging_configuration" }
+            },
+            "additionalProperties": false,
+            "minProperties": 3
+        },
+        "observatories": {
+            "description": "A list of all observatories we have access to",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/observatory"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+        },
+        "data_source": {
+            "description": "Definition of the data source",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Name of the data source",
+                    "type": "string"
+                },
+                "cache_life_days": {
+                    "description": "How old should the entry be for this source before it is refreshed (in days)?",
+                    "type": "integer"
+                },
+                "use": {
+                    "description": "Should the source be used? If missing, it is assume to be True",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "required": ["name", "cache_life_days"]
+        },
+        "configuration": {
+            "description": "",
+            "type": "object",
+            "properties": {
+                "root": {
+                    "description": "Directory root where cache etc are location",
+                    "type": "string"
+                },
                 "cache_file": {
                     "description": "Name of the cache file",
                     "type": "string"
                 },
-                "cache_image_dir": {
-                    "description": "Directory under the files root where the cache will be stored",
-                    "type": "string"
-                }              
+                "data_sources": {
+                    "description": "A list of data sources that will be used",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/data_source"
+                    }
+                }
             }
         }
     }

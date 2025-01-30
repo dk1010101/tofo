@@ -1,45 +1,76 @@
-observatory:
-  name: "Palomar Observatory"
-  lat_deg: 33.3564
-  lon_deg: -116.865
-  elevation_m: 1712
-  time_zone: "US/Pacific"
-  temperature_C: 12.0
-  rel_humidity_percentage: 18
-  pressure_hPa: 985.6
-  horizon_file: horizon_example.csv
-telescope:
-  name: "Hale Telescope"
-  focal_length_mm: 16750
-  aperture_mm: 5100
-  sensor:
-    name: "Science Detector"
-    size_x_mm: 92.2
-    size_y_mm: 92.4
-    num_pix_x: 6144
-    num_pix_y: 6160
-    pix_x_size_um: 3.87
-    pix_y_size_um: 3.87
-    crota1: 0.0
-    crota2: 0.0
-  filter: r
-observations:
-  twilight: astronomical
-  min_mag: 19.0
-  exo_hours_before: 1
-  exo_hours_after: 1
-sources:
-  cache_file: tofo_palomar.hdf5
-  cache_image_dir: imagecache
-  exoclock:
-    cache_life_days: 30
-  #nasa_exo_archive:
-  #  cache_life_days: 90
-  aavso_vsx:
-    cache_life_days: -1
-  #gcvs:
-  #  cache_life_days: 180
-  exo_score:
-    cache_life_days: -1
-config:
-  files_root: .
+default_observatory: "Palomar"
+observatories:
+  - name: Palomar-Hale
+    physical:
+      lat_deg: 33.3564
+      lon_deg: -116.865
+      elevation_m: 1712
+      time_zone: "US/Pacific"
+      temperature_C: 12.0
+      rel_humidity_percentage: 18.0
+      pressure_hPa: 985.6
+      horizon_file: horizon_example.csv
+    instrument:
+      optics:
+        name: "Hale"
+        focal_length_mm: 1524.0
+        aperture_mm: 5100.0
+      sensor:
+        name: "Science Detector"
+        size_x_mm: 92.2
+        size_y_mm: 92.4
+        num_pix_x: 6144
+        num_pix_y: 6160
+        pix_x_size_um: 3.87
+        pix_y_size_um: 3.87
+        crota1: 0.0
+        crota2: 0.0
+    configuration:
+      twilight: astronomical
+      limiting_mag: 25.0
+      exo_hours_before: 1.0
+      exo_hours_after: 1.0
+  - name: Palomar-P60
+    physical:
+      lat_deg: 33.3564
+      lon_deg: -116.865
+      elevation_m: 1712
+      time_zone: "US/Pacific"
+      temperature_C: 12.0
+      rel_humidity_percentage: 18.0
+      pressure_hPa: 985.6
+      horizon_file: horizon_example.csv
+    instrument:
+      optics:
+        name: "P60"
+        focal_length_mm: 13335.0
+        aperture_mm: 1536.0
+      sensor:
+        name: "Facility Optical Camera"
+        size_x_mm: 50.04
+        size_y_mm: 50.04
+        num_pix_x: 2048
+        num_pix_y: 2048
+        pix_x_size_um: 24.43323
+        pix_y_size_um: 24.43323
+        crota1: 0.0
+        crota2: 0.0
+    configuration:
+      twilight: astronomical
+      limiting_mag: 20.5
+      exo_hours_before: 1.0
+      exo_hours_after: 1.0
+configuration:
+  root: "."
+  cache_file: "tofo.yaml"
+  data_sources:
+    - name: "exoclock"
+      cache_life_days: 30.0
+    - name: "nasa_exo_archive"
+      cache_life_days: 90.0
+    - name: "aavso_vsx"
+      cache_life_days: -1.0
+    - name: "gcvs"
+      cache_life_days: 180.0
+    - name: "exo_score"
+      cache_life_days: -1.0

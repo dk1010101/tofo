@@ -5,7 +5,7 @@ from typing import List, Any
 
 from astroplan import download_IERS_A
 
-from tofo.observatory import Observatory
+from tofo.observatory import Observatories
 from tofo.target import Target
 from tofo.sources.aavso import VSX
 from tofo.sources.gcvs import GCVS
@@ -17,34 +17,34 @@ from tofo.sources.image_cache import ImageCache
 
 class ObjectDB():
     """Collection of all different data sources and mechanisms to query them."""
-    def __init__(self, observatory: Observatory):
+    def __init__(self, observatories: Observatories):
         
         download_IERS_A() # update IERS BUlletin A held in the cache. Check https://astroplan.readthedocs.io/en/stable/faq/iers.html for more info.
         
-        self.observatory = observatory
+        self.observatories = observatories
         
-        if VSX.name in observatory.sources.keys():
-            self.vsx = VSX(observatory)
+        if VSX.name in self.observatories.sources.keys():
+            self.vsx = VSX(self.observatories)
         else:
             raise ValueError("the observatory file must have the ExoClock section.")
-        if GCVS.name in observatory.sources.keys():
-            self.gcvs = GCVS(observatory)
+        if GCVS.name in self.observatories.sources.keys():
+            self.gcvs = GCVS(self.observatories)
         else:
             self.gcvs = None
-        if NasaExoArchive.name in observatory.sources.keys():
-            self.nasa_exo = NasaExoArchive(observatory)
+        if NasaExoArchive.name in self.observatories.sources.keys():
+            self.nasa_exo = NasaExoArchive(self.observatories)
         else:
             self.nasa_exo = None
-        if ExoClock.name in observatory.sources.keys():
-            self.exoclock = ExoClock(observatory)
+        if ExoClock.name in self.observatories.sources.keys():
+            self.exoclock = ExoClock(self.observatories)
         else:
             raise ValueError("the observatory file must have the ExoClock section.")
-        if ExoScore.name in observatory.sources.keys():
-            self.exo_score = ExoScore(observatory, vsx=self.vsx)
+        if ExoScore.name in self.observatories.sources.keys():
+            self.exo_score = ExoScore(self.observatories, vsx=self.vsx)
         else:
             self.exo_score = None
             
-        self.image_cache = ImageCache(observatory)
+        self.image_cache = ImageCache(self.observatories)
         
     def find_object(self, name: str) -> Target | None:
         """Find the general object using local databases.
